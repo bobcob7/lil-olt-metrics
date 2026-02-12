@@ -112,6 +112,22 @@ func createStore(logger *slog.Logger, cfg *config.Config) (store.Store, error) {
 			RetentionAge:     cfg.Retention.Duration.AsDuration(),
 			RetentionMaxSize: int64(cfg.Retention.MaxSize),
 		})
+	case "prometheus":
+		return store.NewPrometheusRemote(storeLogger, store.PrometheusRemoteConfig{
+			WriteURL: cfg.Storage.Prometheus.WriteURL,
+			ReadURL:  cfg.Storage.Prometheus.ReadURL,
+			Timeout:  cfg.Storage.Prometheus.Timeout.AsDuration(),
+			Username: cfg.Storage.Prometheus.BasicAuth.Username,
+			Password: cfg.Storage.Prometheus.BasicAuth.Password,
+		}), nil
+	case "victoriametrics":
+		return store.NewVMRemote(storeLogger, store.VMRemoteConfig{
+			WriteURL: cfg.Storage.VictoriaMetrics.WriteURL,
+			ReadURL:  cfg.Storage.VictoriaMetrics.ReadURL,
+			Timeout:  cfg.Storage.VictoriaMetrics.Timeout.AsDuration(),
+			Username: cfg.Storage.VictoriaMetrics.BasicAuth.Username,
+			Password: cfg.Storage.VictoriaMetrics.BasicAuth.Password,
+		}), nil
 	default:
 		return store.NewMemStore(storeLogger, cfg.Retention.Duration.AsDuration()), nil
 	}

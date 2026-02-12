@@ -3,6 +3,7 @@ module github.com/bobcob7/lil-olt-metrics
 go 1.25.5
 
 require (
+	github.com/golang/snappy v1.0.0
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/matryer/moq v0.6.0
 	github.com/prometheus/prometheus v0.309.1
