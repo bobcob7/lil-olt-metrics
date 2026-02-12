@@ -52,21 +52,25 @@ func run() int {
 	}
 	logger := buildLogger(cfg.Server)
 	logger.Info("starting lil-olt-metrics", "version", version, "commit", commit)
-	ms := store.NewMemStore(logger.With("component", "store"), cfg.Retention.Duration.AsDuration())
-	defer func() { _ = ms.Close() }()
+	s, err := createStore(logger, cfg)
+	if err != nil {
+		logger.Error("failed to create store", "error", err)
+		return 1
+	}
+	defer func() { _ = s.Close() }()
 	translator := ingest.NewTranslator(logger.With("component", "translator"), cfg.Translation)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	errCh := make(chan error, 3)
 	var grpcSrv *grpc.Server
 	if cfg.OTLP.GRPC.Enabled {
-		grpcSrv = startGRPC(ctx, logger, cfg.OTLP.GRPC, translator, ms, errCh)
+		grpcSrv = startGRPC(logger, cfg.OTLP.GRPC, translator, s, errCh)
 	}
 	var otlpHTTPSrv *http.Server
 	if cfg.OTLP.HTTP.Enabled {
-		otlpHTTPSrv = startOTLPHTTP(ctx, logger, cfg.OTLP.HTTP, translator, ms, errCh)
+		otlpHTTPSrv = startOTLPHTTP(logger, cfg.OTLP.HTTP, translator, s, errCh)
 	}
-	querySrv := startQueryAPI(ctx, logger, cfg, ms, errCh)
+	querySrv := startQueryAPI(logger, cfg, s, errCh)
 	select {
 	case <-ctx.Done():
 		logger.Info("received shutdown signal")
@@ -96,6 +100,23 @@ func run() int {
 	return 0
 }
 
+func createStore(logger *slog.Logger, cfg *config.Config) (store.Store, error) {
+	storeLogger := logger.With("component", "store")
+	switch cfg.Storage.Engine {
+	case "fs":
+		return store.NewFSStore(storeLogger, store.FSStoreConfig{
+			Path:             cfg.Storage.FS.Path,
+			WALSegmentSize:   int64(cfg.Storage.FS.WAL.SegmentSize),
+			FlushAge:         cfg.Storage.FS.Compaction.MinBlockDuration.AsDuration(),
+			CompactionPeriod: cfg.Storage.FS.Compaction.MinBlockDuration.AsDuration(),
+			RetentionAge:     cfg.Retention.Duration.AsDuration(),
+			RetentionMaxSize: int64(cfg.Retention.MaxSize),
+		})
+	default:
+		return store.NewMemStore(storeLogger, cfg.Retention.Duration.AsDuration()), nil
+	}
+}
+
 func buildLogger(cfg config.ServerConfig) *slog.Logger {
 	level := slog.LevelInfo
 	switch cfg.LogLevel {
@@ -116,8 +137,7 @@ func buildLogger(cfg config.ServerConfig) *slog.Logger {
 	return slog.New(handler)
 }
 
-func startGRPC(ctx context.Context, logger *slog.Logger, cfg config.OTLPGRPCConfig, translator *ingest.Translator, ms *store.MemStore, errCh chan<- error) *grpc.Server {
-	_ = ctx
+func startGRPC(logger *slog.Logger, cfg config.OTLPGRPCConfig, translator *ingest.Translator, s store.Store, errCh chan<- error) *grpc.Server {
 	grpcLogger := logger.With("component", "otlp-grpc")
 	var opts []grpc.ServerOption
 	opts = append(opts, grpc.MaxRecvMsgSize(cfg.MaxRecvMsgSize))
@@ -125,7 +145,7 @@ func startGRPC(ctx context.Context, logger *slog.Logger, cfg config.OTLPGRPCConf
 		_ = gzip.Name
 	}
 	srv := grpc.NewServer(opts...)
-	handler := ingest.NewGRPCHandler(grpcLogger, translator, ms)
+	handler := ingest.NewGRPCHandler(grpcLogger, translator, s)
 	colmetricspb.RegisterMetricsServiceServer(srv, handler)
 	lis, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -142,10 +162,9 @@ func startGRPC(ctx context.Context, logger *slog.Logger, cfg config.OTLPGRPCConf
 	return srv
 }
 
-func startOTLPHTTP(ctx context.Context, logger *slog.Logger, cfg config.OTLPHTTPConfig, translator *ingest.Translator, ms *store.MemStore, errCh chan<- error) *http.Server {
-	_ = ctx
+func startOTLPHTTP(logger *slog.Logger, cfg config.OTLPHTTPConfig, translator *ingest.Translator, s store.Store, errCh chan<- error) *http.Server {
 	httpLogger := logger.With("component", "otlp-http")
-	handler := ingest.NewHTTPHandler(httpLogger, translator, ms, cfg.MaxBodySize)
+	handler := ingest.NewHTTPHandler(httpLogger, translator, s, cfg.MaxBodySize)
 	mux := http.NewServeMux()
 	mux.Handle("/v1/metrics", handler)
 	srv := &http.Server{
@@ -167,9 +186,9 @@ func startOTLPHTTP(ctx context.Context, logger *slog.Logger, cfg config.OTLPHTTP
 	return srv
 }
 
-func startQueryAPI(_ context.Context, logger *slog.Logger, cfg *config.Config, ms *store.MemStore, errCh chan<- error) *http.Server {
+func startQueryAPI(logger *slog.Logger, cfg *config.Config, s store.Store, errCh chan<- error) *http.Server {
 	queryLogger := logger.With("component", "query-api")
-	queryable := store.NewQueryable(ms)
+	queryable := store.NewQueryable(s)
 	engine := promql.NewEngine(promql.EngineOpts{
 		Logger:               queryLogger,
 		MaxSamples:           cfg.Prometheus.MaxSamples,
