@@ -1,0 +1,9 @@
+apiVersion: 1
+
+datasources:
+  - name: lil-olt-metrics
+    type: prometheus
+    access: proxy
+    url: http://lil-olt-metrics:9090
+    isDefault: true
+    editable: false
