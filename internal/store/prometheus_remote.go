@@ -107,7 +107,9 @@ func (p *PrometheusRemote) send(timeseries []prompb.TimeSeries) error {
 			continue
 		}
 		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			p.logger.Error("closing response body", "error", closeErr)
+		}
 		if resp.StatusCode/100 == 2 {
 			return nil
 		}

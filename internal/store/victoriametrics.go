@@ -89,7 +89,11 @@ func (v *VMRemote) Select(ctx context.Context, sortSeries bool, mint, maxt int64
 		v.logger.Warn("VM read failed", "error", err)
 		return &sliceSeriesSet{idx: -1}
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			v.logger.Error("closing response body", "error", err)
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return &sliceSeriesSet{idx: -1}
@@ -164,7 +168,9 @@ func (v *VMRemote) send(rows []vmImportRow) error {
 			continue
 		}
 		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			v.logger.Error("closing response body", "error", closeErr)
+		}
 		if resp.StatusCode/100 == 2 {
 			return nil
 		}
