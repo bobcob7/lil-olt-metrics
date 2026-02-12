@@ -1,4 +1,4 @@
-# Plan 09 — FS Persistence, WAL, Compaction & Retention
+# ✅ COMPLETE — Plan 09 — FS Persistence, WAL, Compaction & Retention
 
 ## Summary
 
