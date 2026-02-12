@@ -1,10 +1,15 @@
 GOBIN := $(CURDIR)/bin
 export PATH := $(GOBIN):$(PATH)
 
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+BRANCH  ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
+LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
+
 .PHONY: build test lint fmt generate vet
 
 build:
-	go build -o $(GOBIN)/lil-olt-metrics ./cmd/server
+	go build -ldflags "$(LDFLAGS)" -o $(GOBIN)/lil-olt-metrics ./cmd/server
 
 test:
 	go test ./...
