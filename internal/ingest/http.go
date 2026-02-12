@@ -5,12 +5,14 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	colmetricspb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
-// HTTPHandler handles OTLP metrics over HTTP (protobuf only).
+// HTTPHandler handles OTLP metrics over HTTP (protobuf and JSON).
 type HTTPHandler struct {
 	logger      *slog.Logger
 	translator  metricsTranslator
@@ -28,7 +30,7 @@ func NewHTTPHandler(logger *slog.Logger, translator metricsTranslator, store met
 	}
 }
 
-// ServeHTTP handles POST /v1/metrics with Content-Type: application/x-protobuf.
+// ServeHTTP handles POST /v1/metrics with Content-Type: application/x-protobuf or application/json.
 func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -41,13 +43,22 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req := &colmetricspb.ExportMetricsServiceRequest{}
-	if err := proto.Unmarshal(body, req); err != nil {
-		h.logger.WarnContext(r.Context(), "failed to unmarshal protobuf", "error", err)
-		http.Error(w, "invalid protobuf payload", http.StatusBadRequest)
-		return
+	ct := r.Header.Get("Content-Type")
+	if strings.Contains(ct, "json") {
+		if err := protojson.Unmarshal(body, req); err != nil {
+			h.logger.WarnContext(r.Context(), "failed to unmarshal JSON", "error", err)
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+	} else {
+		if err := proto.Unmarshal(body, req); err != nil {
+			h.logger.WarnContext(r.Context(), "failed to unmarshal protobuf", "error", err)
+			http.Error(w, "invalid protobuf payload", http.StatusBadRequest)
+			return
+		}
 	}
 	if len(req.GetResourceMetrics()) == 0 {
-		h.writeProtoResponse(w, &colmetricspb.ExportMetricsServiceResponse{})
+		h.writeResponse(w, ct, &colmetricspb.ExportMetricsServiceResponse{})
 		return
 	}
 	app := h.store.Appender(r.Context())
@@ -71,7 +82,7 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 		h.logger.InfoContext(r.Context(), "ingested metrics (partial)", "samples", count)
-		h.writeProtoResponse(w, resp)
+		h.writeResponse(w, ct, resp)
 		return
 	}
 	if err := app.Commit(); err != nil {
@@ -81,7 +92,7 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.logger.DebugContext(r.Context(), "ingested metrics", "samples", count)
-	h.writeProtoResponse(w, &colmetricspb.ExportMetricsServiceResponse{})
+	h.writeResponse(w, ct, &colmetricspb.ExportMetricsServiceResponse{})
 }
 
 func (h *HTTPHandler) readBody(r *http.Request) ([]byte, error) {
@@ -97,7 +108,18 @@ func (h *HTTPHandler) readBody(r *http.Request) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(reader, int64(h.maxBodySize)))
 }
 
-func (h *HTTPHandler) writeProtoResponse(w http.ResponseWriter, resp *colmetricspb.ExportMetricsServiceResponse) {
+func (h *HTTPHandler) writeResponse(w http.ResponseWriter, requestCT string, resp *colmetricspb.ExportMetricsServiceResponse) {
+	if strings.Contains(requestCT, "json") {
+		data, err := protojson.Marshal(resp)
+		if err != nil {
+			http.Error(w, "failed to marshal response", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(data)
+		return
+	}
 	data, err := proto.Marshal(resp)
 	if err != nil {
 		http.Error(w, "failed to marshal response", http.StatusInternalServerError)
