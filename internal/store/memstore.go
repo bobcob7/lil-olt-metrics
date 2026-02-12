@@ -37,10 +37,12 @@ type memSeries struct {
 	samples []Sample
 }
 
+// Appender implements Store.
 func (s *MemStore) Appender(_ context.Context) Appender {
 	return &memAppender{store: s}
 }
 
+// Select implements Store.
 func (s *MemStore) Select(_ context.Context, sortSeries bool, mint, maxt int64, matchers ...*labels.Matcher) SeriesSet {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -65,6 +67,7 @@ func (s *MemStore) Select(_ context.Context, sortSeries bool, mint, maxt int64, 
 	return &sliceSeriesSet{series: result, idx: -1}
 }
 
+// LabelNames implements Store.
 func (s *MemStore) LabelNames(_ context.Context, mint, maxt int64, matchers ...*labels.Matcher) ([]string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -90,6 +93,7 @@ func (s *MemStore) LabelNames(_ context.Context, mint, maxt int64, matchers ...*
 	return names, nil
 }
 
+// LabelValues implements Store.
 func (s *MemStore) LabelValues(_ context.Context, name string, mint, maxt int64, matchers ...*labels.Matcher) ([]string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -115,6 +119,7 @@ func (s *MemStore) LabelValues(_ context.Context, name string, mint, maxt int64,
 	return values, nil
 }
 
+// Close implements Store.
 func (s *MemStore) Close() error {
 	return nil
 }

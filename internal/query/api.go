@@ -147,7 +147,7 @@ func (a *API) series(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "internal", err.Error())
 		return
 	}
-	defer q.Close()
+	defer func() { _ = q.Close() }()
 	var result []map[string]string
 	for _, m := range matchValues {
 		matchers, parseErr := parser.ParseMetricSelector(m)
@@ -186,7 +186,7 @@ func (a *API) labelNames(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "internal", err.Error())
 		return
 	}
-	defer q.Close()
+	defer func() { _ = q.Close() }()
 	names, _, err := q.LabelNames(r.Context(), nil)
 	if err != nil {
 		writeError(w, "internal", err.Error())
@@ -225,7 +225,7 @@ func (a *API) labelValues(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "internal", err.Error())
 		return
 	}
-	defer q.Close()
+	defer func() { _ = q.Close() }()
 	values, _, err := q.LabelValues(r.Context(), labelName, nil)
 	if err != nil {
 		writeError(w, "internal", err.Error())

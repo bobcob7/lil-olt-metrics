@@ -102,7 +102,7 @@ func (h *HTTPHandler) readBody(r *http.Request) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer gz.Close()
+		defer func() { _ = gz.Close() }()
 		reader = gz
 	}
 	return io.ReadAll(io.LimitReader(reader, int64(h.maxBodySize)))

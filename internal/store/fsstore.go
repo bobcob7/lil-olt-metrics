@@ -53,7 +53,7 @@ func NewFSStore(logger *slog.Logger, cfg FSStoreConfig) (*FSStore, error) {
 		stopCh: make(chan struct{}),
 	}
 	if err := s.openBlocks(); err != nil {
-		wal.Close()
+		_ = wal.Close()
 		return nil, fmt.Errorf("opening blocks: %w", err)
 	}
 	replayCount := 0
@@ -63,7 +63,7 @@ func NewFSStore(logger *slog.Logger, cfg FSStoreConfig) (*FSStore, error) {
 		_ = app.Commit()
 		replayCount++
 	}); err != nil {
-		wal.Close()
+		_ = wal.Close()
 		return nil, fmt.Errorf("replaying WAL: %w", err)
 	}
 	if replayCount > 0 {
@@ -76,10 +76,12 @@ func NewFSStore(logger *slog.Logger, cfg FSStoreConfig) (*FSStore, error) {
 	return s, nil
 }
 
+// Appender implements Store.
 func (s *FSStore) Appender(ctx context.Context) Appender {
 	return &fsAppender{store: s, inner: s.mem.Appender(ctx).(*memAppender)}
 }
 
+// Select implements Store.
 func (s *FSStore) Select(ctx context.Context, sortSeries bool, mint, maxt int64, matchers ...*labels.Matcher) SeriesSet {
 	memSS := s.mem.Select(ctx, sortSeries, mint, maxt, matchers...)
 	var allSeries []Series
@@ -103,6 +105,7 @@ func (s *FSStore) Select(ctx context.Context, sortSeries bool, mint, maxt int64,
 	return &sliceSeriesSet{series: allSeries, idx: -1}
 }
 
+// LabelNames implements Store.
 func (s *FSStore) LabelNames(ctx context.Context, mint, maxt int64, matchers ...*labels.Matcher) ([]string, error) {
 	names, err := s.mem.LabelNames(ctx, mint, maxt, matchers...)
 	if err != nil {
@@ -135,6 +138,7 @@ func (s *FSStore) LabelNames(ctx context.Context, mint, maxt int64, matchers ...
 	return result, nil
 }
 
+// LabelValues implements Store.
 func (s *FSStore) LabelValues(ctx context.Context, name string, mint, maxt int64, matchers ...*labels.Matcher) ([]string, error) {
 	values, err := s.mem.LabelValues(ctx, name, mint, maxt, matchers...)
 	if err != nil {
@@ -167,6 +171,7 @@ func (s *FSStore) LabelValues(ctx context.Context, name string, mint, maxt int64
 	return result, nil
 }
 
+// Close implements Store.
 func (s *FSStore) Close() error {
 	close(s.stopCh)
 	s.wg.Wait()
@@ -281,7 +286,7 @@ func (s *FSStore) compact() error {
 		return fmt.Errorf("compacting blocks: %w", err)
 	}
 	for _, b := range s.blocks {
-		os.RemoveAll(b.dir)
+		_ = os.RemoveAll(b.dir)
 	}
 	s.blocks = []*block{merged}
 	s.logger.Info("compacted blocks", "result", targetDir)
@@ -296,7 +301,7 @@ func (s *FSStore) applyRetention() {
 		var kept []*block
 		for _, b := range s.blocks {
 			if b.meta.MaxTime < cutoff {
-				os.RemoveAll(b.dir)
+				_ = os.RemoveAll(b.dir)
 				s.logger.Info("retention: removed block", "dir", b.dir)
 			} else {
 				kept = append(kept, b)
@@ -313,7 +318,7 @@ func (s *FSStore) applyRetention() {
 		for totalSize > s.cfg.RetentionMaxSize && len(s.blocks) > 0 {
 			oldest := s.blocks[0]
 			sz, _ := blockDiskSize(oldest.dir)
-			os.RemoveAll(oldest.dir)
+			_ = os.RemoveAll(oldest.dir)
 			s.logger.Info("retention: removed oldest block for size", "dir", oldest.dir)
 			s.blocks = s.blocks[1:]
 			totalSize -= sz

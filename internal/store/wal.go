@@ -44,7 +44,7 @@ func NewWAL(dir string, maxSegmentSize int64) (*WAL, error) {
 	}
 	info, err := f.Stat()
 	if err != nil {
-		f.Close()
+		_ = f.Close()
 		return nil, err
 	}
 	w.segment = f
@@ -233,7 +233,7 @@ func replaySegment(path string, fn func(walRecord)) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	for {
 		rec, err := decodeWALRecord(f)
 		if err == io.EOF {

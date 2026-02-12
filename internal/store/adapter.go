@@ -96,6 +96,7 @@ func (it *sampleIterator) Next() chunkenc.ValueType {
 	return chunkenc.ValFloat
 }
 
+//nolint:govet // Seek implements chunkenc.Iterator, not io.Seeker.
 func (it *sampleIterator) Seek(t int64) chunkenc.ValueType {
 	if it.idx < 0 {
 		it.idx = 0

@@ -45,20 +45,20 @@ func writeBlock(dir string, series []blockSeries, mint, maxt int64) (*block, err
 		return nil, fmt.Errorf("creating meta file: %w", err)
 	}
 	if err := json.NewEncoder(mf).Encode(meta); err != nil {
-		mf.Close()
+		_ = mf.Close()
 		return nil, fmt.Errorf("writing meta: %w", err)
 	}
-	mf.Close()
+	_ = mf.Close()
 	dataPath := filepath.Join(dir, "data.json")
 	df, err := os.Create(dataPath)
 	if err != nil {
 		return nil, fmt.Errorf("creating data file: %w", err)
 	}
 	if err := json.NewEncoder(df).Encode(series); err != nil {
-		df.Close()
+		_ = df.Close()
 		return nil, fmt.Errorf("writing data: %w", err)
 	}
-	df.Close()
+	_ = df.Close()
 	return &block{dir: dir, meta: meta, series: series}, nil
 }
 
@@ -69,7 +69,7 @@ func openBlock(dir string) (*block, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening meta: %w", err)
 	}
-	defer mf.Close()
+	defer func() { _ = mf.Close() }()
 	var meta blockMeta
 	if err := json.NewDecoder(mf).Decode(&meta); err != nil {
 		return nil, fmt.Errorf("decoding meta: %w", err)
@@ -79,7 +79,7 @@ func openBlock(dir string) (*block, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening data: %w", err)
 	}
-	defer df.Close()
+	defer func() { _ = df.Close() }()
 	var series []blockSeries
 	if err := json.NewDecoder(df).Decode(&series); err != nil {
 		return nil, fmt.Errorf("decoding data: %w", err)
