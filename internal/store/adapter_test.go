@@ -185,23 +185,6 @@ func TestSeriesSetSorted(t *testing.T) {
 	assert.False(t, ss.Next())
 }
 
-// sliceSeriesSet is a simple SeriesSet backed by a slice for testing.
-type sliceSeriesSet struct {
-	series []Series
-	idx    int
-}
-
-func (s *sliceSeriesSet) Next() bool {
-	s.idx++
-	return s.idx < len(s.series)
-}
-
-func (s *sliceSeriesSet) At() Series {
-	return s.series[s.idx]
-}
-
-func (s *sliceSeriesSet) Err() error { return nil }
-
 // stubSeriesImpl is a simple Series implementation for testing.
 type stubSeriesImpl struct {
 	labels  labels.Labels
