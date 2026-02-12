@@ -53,22 +53,27 @@ func NewPrometheusRemote(logger *slog.Logger, cfg PrometheusRemoteConfig) *Prome
 	}
 }
 
+// Appender implements Store.
 func (p *PrometheusRemote) Appender(_ context.Context) Appender {
 	return &promRemoteAppender{store: p}
 }
 
+// Select implements Store.
 func (p *PrometheusRemote) Select(_ context.Context, _ bool, _, _ int64, _ ...*labels.Matcher) SeriesSet {
 	return &sliceSeriesSet{idx: -1}
 }
 
+// LabelNames implements Store.
 func (p *PrometheusRemote) LabelNames(_ context.Context, _, _ int64, _ ...*labels.Matcher) ([]string, error) {
 	return nil, nil
 }
 
+// LabelValues implements Store.
 func (p *PrometheusRemote) LabelValues(_ context.Context, _ string, _, _ int64, _ ...*labels.Matcher) ([]string, error) {
 	return nil, nil
 }
 
+// Close implements Store.
 func (p *PrometheusRemote) Close() error {
 	return nil
 }
@@ -102,7 +107,9 @@ func (p *PrometheusRemote) send(timeseries []prompb.TimeSeries) error {
 			continue
 		}
 		_, _ = io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			p.logger.Error("closing response body", "error", closeErr)
+		}
 		if resp.StatusCode/100 == 2 {
 			return nil
 		}

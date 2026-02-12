@@ -61,10 +61,12 @@ type vmImportRow struct {
 	Timestamps []int64           `json:"timestamps"`
 }
 
+// Appender implements Store.
 func (v *VMRemote) Appender(_ context.Context) Appender {
 	return &vmAppender{store: v}
 }
 
+// Select implements Store.
 func (v *VMRemote) Select(ctx context.Context, sortSeries bool, mint, maxt int64, matchers ...*labels.Matcher) SeriesSet {
 	if v.cfg.ReadURL == "" {
 		return &sliceSeriesSet{idx: -1}
@@ -87,7 +89,11 @@ func (v *VMRemote) Select(ctx context.Context, sortSeries bool, mint, maxt int64
 		v.logger.Warn("VM read failed", "error", err)
 		return &sliceSeriesSet{idx: -1}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			v.logger.Error("closing response body", "error", err)
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return &sliceSeriesSet{idx: -1}
@@ -118,14 +124,17 @@ func (v *VMRemote) Select(ctx context.Context, sortSeries bool, mint, maxt int64
 	return &sliceSeriesSet{series: result, idx: -1}
 }
 
+// LabelNames implements Store.
 func (v *VMRemote) LabelNames(_ context.Context, _, _ int64, _ ...*labels.Matcher) ([]string, error) {
 	return nil, nil
 }
 
+// LabelValues implements Store.
 func (v *VMRemote) LabelValues(_ context.Context, _ string, _, _ int64, _ ...*labels.Matcher) ([]string, error) {
 	return nil, nil
 }
 
+// Close implements Store.
 func (v *VMRemote) Close() error {
 	return nil
 }
@@ -159,7 +168,9 @@ func (v *VMRemote) send(rows []vmImportRow) error {
 			continue
 		}
 		_, _ = io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			v.logger.Error("closing response body", "error", closeErr)
+		}
 		if resp.StatusCode/100 == 2 {
 			return nil
 		}

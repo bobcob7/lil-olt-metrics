@@ -230,7 +230,11 @@ func TestMemStoreQueryableAdapterIntegration(t *testing.T) {
 	q := NewQueryable(s)
 	querier, err := q.Querier(0, 2000)
 	require.NoError(t, err)
-	defer querier.Close()
+	defer func() {
+		if err := querier.Close(); err != nil {
+			t.Log("closing querier:", err)
+		}
+	}()
 	m := labels.MustNewMatcher(labels.MatchEqual, "__name__", "up")
 	ss := querier.Select(ctx, false, nil, m)
 	require.True(t, ss.Next())

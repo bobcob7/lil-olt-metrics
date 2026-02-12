@@ -33,7 +33,11 @@ func TestQueryableSelect(t *testing.T) {
 	q := NewQueryable(mock)
 	querier, err := q.Querier(0, 10000)
 	require.NoError(t, err)
-	defer querier.Close()
+	defer func() {
+		if err := querier.Close(); err != nil {
+			t.Log("closing querier:", err)
+		}
+	}()
 	matcher := labels.MustNewMatcher(labels.MatchEqual, "__name__", "http_requests_total")
 	ss := querier.Select(ctx, false, nil, matcher)
 	var collected []storage.Series
@@ -72,7 +76,11 @@ func TestQueryableSelectWithHints(t *testing.T) {
 	q := NewQueryable(mock)
 	querier, err := q.Querier(0, 10000)
 	require.NoError(t, err)
-	defer querier.Close()
+	defer func() {
+		if err := querier.Close(); err != nil {
+			t.Log("closing querier:", err)
+		}
+	}()
 	hints := &storage.SelectHints{Start: 500, End: 5000}
 	querier.Select(ctx, false, hints)
 	assert.Equal(t, int64(500), capturedMint)
@@ -91,7 +99,11 @@ func TestQueryableLabelNames(t *testing.T) {
 	q := NewQueryable(mock)
 	querier, err := q.Querier(0, 10000)
 	require.NoError(t, err)
-	defer querier.Close()
+	defer func() {
+		if err := querier.Close(); err != nil {
+			t.Log("closing querier:", err)
+		}
+	}()
 	names, warnings, err := querier.LabelNames(ctx, nil)
 	require.NoError(t, err)
 	assert.Nil(t, warnings)
@@ -113,7 +125,11 @@ func TestQueryableLabelValues(t *testing.T) {
 	q := NewQueryable(mock)
 	querier, err := q.Querier(0, 10000)
 	require.NoError(t, err)
-	defer querier.Close()
+	defer func() {
+		if err := querier.Close(); err != nil {
+			t.Log("closing querier:", err)
+		}
+	}()
 	vals, warnings, err := querier.LabelValues(ctx, "__name__", nil)
 	require.NoError(t, err)
 	assert.Nil(t, warnings)
@@ -150,7 +166,11 @@ func TestEmptySeriesSet(t *testing.T) {
 	q := NewQueryable(mock)
 	querier, err := q.Querier(0, 10000)
 	require.NoError(t, err)
-	defer querier.Close()
+	defer func() {
+		if err := querier.Close(); err != nil {
+			t.Log("closing querier:", err)
+		}
+	}()
 	ss := querier.Select(ctx, false, nil)
 	assert.False(t, ss.Next())
 	assert.NoError(t, ss.Err())
@@ -176,7 +196,11 @@ func TestSeriesSetSorted(t *testing.T) {
 	q := NewQueryable(mock)
 	querier, err := q.Querier(0, 10000)
 	require.NoError(t, err)
-	defer querier.Close()
+	defer func() {
+		if err := querier.Close(); err != nil {
+			t.Log("closing querier:", err)
+		}
+	}()
 	ss := querier.Select(ctx, true, nil)
 	require.True(t, ss.Next())
 	assert.Equal(t, "a_metric", ss.At().Labels().Get("__name__"))

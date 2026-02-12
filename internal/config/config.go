@@ -18,6 +18,7 @@ type Duration int64
 // AsDuration returns the underlying time.Duration.
 func (d Duration) AsDuration() time.Duration { return time.Duration(d) }
 
+// UnmarshalYAML parses a duration string from YAML.
 func (d *Duration) UnmarshalYAML(value *yaml.Node) error {
 	var s string
 	if err := value.Decode(&s); err != nil {
@@ -39,12 +40,14 @@ func (d *Duration) UnmarshalYAML(value *yaml.Node) error {
 // ByteSize is an int64 byte count that parses human-readable sizes ("128MB", "10GB").
 type ByteSize int64
 
+// ByteSize constants for human-readable size configuration.
 const (
 	KB ByteSize = 1024
 	MB ByteSize = 1024 * KB
 	GB ByteSize = 1024 * MB
 )
 
+// UnmarshalYAML parses a byte size string from YAML.
 func (b *ByteSize) UnmarshalYAML(value *yaml.Node) error {
 	var s string
 	if err := value.Decode(&s); err != nil {

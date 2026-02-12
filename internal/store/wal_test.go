@@ -24,7 +24,11 @@ func TestWALWriteAndReplay(t *testing.T) {
 	require.NoError(t, w.Close())
 	w2, err := NewWAL(walDir, 1024*1024)
 	require.NoError(t, err)
-	defer w2.Close()
+	defer func() {
+		if err := w2.Close(); err != nil {
+			t.Log("closing WAL:", err)
+		}
+	}()
 	var replayed []walRecord
 	require.NoError(t, w2.Replay(func(rec walRecord) {
 		replayed = append(replayed, rec)
@@ -53,7 +57,11 @@ func TestWALSegmentRotation(t *testing.T) {
 	require.NoError(t, w.Close())
 	w2, err := NewWAL(walDir, 100)
 	require.NoError(t, err)
-	defer w2.Close()
+	defer func() {
+		if err := w2.Close(); err != nil {
+			t.Log("closing WAL:", err)
+		}
+	}()
 	count := 0
 	require.NoError(t, w2.Replay(func(_ walRecord) {
 		count++
@@ -78,7 +86,11 @@ func TestWALTruncate(t *testing.T) {
 	require.NoError(t, w.Close())
 	w2, err := NewWAL(walDir, 50)
 	require.NoError(t, err)
-	defer w2.Close()
+	defer func() {
+		if err := w2.Close(); err != nil {
+			t.Log("closing WAL:", err)
+		}
+	}()
 	count := 0
 	require.NoError(t, w2.Replay(func(_ walRecord) {
 		count++
@@ -92,7 +104,11 @@ func TestWALEmptyReplay(t *testing.T) {
 	walDir := filepath.Join(dir, "wal")
 	w, err := NewWAL(walDir, 1024*1024)
 	require.NoError(t, err)
-	defer w.Close()
+	defer func() {
+		if err := w.Close(); err != nil {
+			t.Log("closing WAL:", err)
+		}
+	}()
 	count := 0
 	require.NoError(t, w.Replay(func(_ walRecord) {
 		count++
