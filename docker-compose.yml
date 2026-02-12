@@ -1,0 +1,28 @@
+services:
+  lil-olt-metrics:
+    build: .
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "9090:9090"   # Prometheus API
+    volumes:
+      - metrics-data:/data
+    environment:
+      - LOM_STORAGE_FS_PATH=/data
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/ds.yml:ro
+    depends_on:
+      - lil-olt-metrics
+
+volumes:
+  metrics-data:
+  grafana-data:
