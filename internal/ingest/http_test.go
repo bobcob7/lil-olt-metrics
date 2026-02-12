@@ -123,6 +123,31 @@ func TestHTTPExportCommitError(t *testing.T) {
 	assert.True(t, app.rolledBack)
 }
 
+func TestHTTPExportJSON(t *testing.T) {
+	t.Parallel()
+	app := &recordingAppender{}
+	h := newTestHTTPHandler(app, 3, nil)
+	body := []byte(`{"resourceMetrics":[{"scopeMetrics":[{"metrics":[{"name":"test","gauge":{"dataPoints":[{"asDouble":1.0,"timeUnixNano":"1000000000"}]}}]}]}]}`)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/metrics", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	h.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, "application/json", rr.Header().Get("Content-Type"))
+	assert.True(t, app.committed)
+}
+
+func TestHTTPExportInvalidJSON(t *testing.T) {
+	t.Parallel()
+	app := &recordingAppender{}
+	h := newTestHTTPHandler(app, 0, nil)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/metrics", bytes.NewReader([]byte("{invalid json")))
+	req.Header.Set("Content-Type", "application/json")
+	h.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
 func newTestHTTPHandler(app *recordingAppender, translateCount int, translateErr error) *HTTPHandler {
 	tr := &metricsTranslatorMock{
 		TranslateFunc: func(_ *colmetricspb.ExportMetricsServiceRequest, _ store.Appender) (int, error) {

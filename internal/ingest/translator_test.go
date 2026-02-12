@@ -359,6 +359,283 @@ func TestTranslateDeltaTemporalitySkipped(t *testing.T) {
 	assert.Empty(t, app.samples)
 }
 
+func TestTranslateDeltaSumConversion(t *testing.T) {
+	t.Parallel()
+	cfg := defaultTranslationConfig()
+	cfg.DeltaConversion = true
+	tr := NewTranslator(testLogger(), cfg)
+	app := &recordingAppender{}
+	makeReq := func(val float64, ts uint64) *colmetricspb.ExportMetricsServiceRequest {
+		return &colmetricspb.ExportMetricsServiceRequest{
+			ResourceMetrics: []*metricspb.ResourceMetrics{{
+				ScopeMetrics: []*metricspb.ScopeMetrics{{
+					Metrics: []*metricspb.Metric{{
+						Name: "delta_counter",
+						Data: &metricspb.Metric_Sum{Sum: &metricspb.Sum{
+							AggregationTemporality: metricspb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+							IsMonotonic:            true,
+							DataPoints: []*metricspb.NumberDataPoint{{
+								TimeUnixNano: ts,
+								Value:        &metricspb.NumberDataPoint_AsDouble{AsDouble: val},
+							}},
+						}},
+					}},
+				}},
+			}},
+		}
+	}
+	count, err := tr.Translate(makeReq(10, 1000000000000), app)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Equal(t, 10.0, app.samples[0].v)
+	count, err = tr.Translate(makeReq(5, 2000000000000), app)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Equal(t, 15.0, app.samples[1].v)
+	count, err = tr.Translate(makeReq(7, 3000000000000), app)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Equal(t, 22.0, app.samples[2].v)
+}
+
+func TestTranslateDeltaHistogramConversion(t *testing.T) {
+	t.Parallel()
+	cfg := defaultTranslationConfig()
+	cfg.DeltaConversion = true
+	cfg.AddUnitSuffix = false
+	tr := NewTranslator(testLogger(), cfg)
+	app := &recordingAppender{}
+	sum1 := 10.0
+	makeReq := func(counts []uint64, total uint64, sum float64, ts uint64) *colmetricspb.ExportMetricsServiceRequest {
+		return &colmetricspb.ExportMetricsServiceRequest{
+			ResourceMetrics: []*metricspb.ResourceMetrics{{
+				ScopeMetrics: []*metricspb.ScopeMetrics{{
+					Metrics: []*metricspb.Metric{{
+						Name: "latency",
+						Data: &metricspb.Metric_Histogram{Histogram: &metricspb.Histogram{
+							AggregationTemporality: metricspb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+							DataPoints: []*metricspb.HistogramDataPoint{{
+								TimeUnixNano:   ts,
+								Count:          total,
+								Sum:            &sum,
+								ExplicitBounds: []float64{1.0},
+								BucketCounts:   counts,
+							}},
+						}},
+					}},
+				}},
+			}},
+		}
+	}
+	count, err := tr.Translate(makeReq([]uint64{2, 3}, 5, sum1, 1000000000000), app)
+	require.NoError(t, err)
+	assert.Equal(t, 4, count)
+	sum2 := 5.0
+	count, err = tr.Translate(makeReq([]uint64{1, 2}, 3, sum2, 2000000000000), app)
+	require.NoError(t, err)
+	assert.Equal(t, 4, count)
+	countSamples := findSamples(app.samples, "latency_count")
+	require.Len(t, countSamples, 2)
+	assert.Equal(t, 5.0, countSamples[0].v)
+	assert.Equal(t, 8.0, countSamples[1].v)
+}
+
+func TestTranslateExponentialHistogram(t *testing.T) {
+	t.Parallel()
+	cfg := defaultTranslationConfig()
+	cfg.AddUnitSuffix = false
+	tr := NewTranslator(testLogger(), cfg)
+	app := &recordingAppender{}
+	sum := 42.0
+	req := &colmetricspb.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metricspb.ResourceMetrics{{
+			ScopeMetrics: []*metricspb.ScopeMetrics{{
+				Metrics: []*metricspb.Metric{{
+					Name: "exp_hist",
+					Data: &metricspb.Metric_ExponentialHistogram{ExponentialHistogram: &metricspb.ExponentialHistogram{
+						AggregationTemporality: metricspb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+						DataPoints: []*metricspb.ExponentialHistogramDataPoint{{
+							TimeUnixNano: 1000000000000,
+							Count:        10,
+							Sum:          &sum,
+							ZeroCount:    2,
+							Scale:        0,
+							Positive: &metricspb.ExponentialHistogramDataPoint_Buckets{
+								Offset:       0,
+								BucketCounts: []uint64{3, 5},
+							},
+						}},
+					}},
+				}},
+			}},
+		}},
+	}
+	count, err := tr.Translate(req, app)
+	require.NoError(t, err)
+	nameMap := make(map[string]int)
+	for _, s := range app.samples {
+		nameMap[s.labels.Get("__name__")]++
+	}
+	assert.Equal(t, 3, nameMap["exp_hist_bucket"])
+	assert.Equal(t, 1, nameMap["exp_hist_count"])
+	assert.Equal(t, 1, nameMap["exp_hist_sum"])
+	assert.Equal(t, 5, count)
+	infSamples := findSamplesWithLabel(app.samples, "le", "+Inf")
+	require.Len(t, infSamples, 1)
+	assert.Equal(t, 10.0, infSamples[0].v)
+}
+
+func TestTranslateSummary(t *testing.T) {
+	t.Parallel()
+	cfg := defaultTranslationConfig()
+	cfg.AddUnitSuffix = false
+	tr := NewTranslator(testLogger(), cfg)
+	app := &recordingAppender{}
+	req := &colmetricspb.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metricspb.ResourceMetrics{{
+			ScopeMetrics: []*metricspb.ScopeMetrics{{
+				Metrics: []*metricspb.Metric{{
+					Name: "request_duration",
+					Data: &metricspb.Metric_Summary{Summary: &metricspb.Summary{
+						DataPoints: []*metricspb.SummaryDataPoint{{
+							TimeUnixNano: 1000000000000,
+							Count:        100,
+							Sum:          456.78,
+							QuantileValues: []*metricspb.SummaryDataPoint_ValueAtQuantile{
+								{Quantile: 0.5, Value: 1.2},
+								{Quantile: 0.9, Value: 3.4},
+								{Quantile: 0.99, Value: 8.9},
+							},
+						}},
+					}},
+				}},
+			}},
+		}},
+	}
+	count, err := tr.Translate(req, app)
+	require.NoError(t, err)
+	assert.Equal(t, 5, count)
+	quantileSamples := findSamples(app.samples, "request_duration")
+	require.Len(t, quantileSamples, 3)
+	assert.Equal(t, "0.5", quantileSamples[0].labels.Get("quantile"))
+	assert.Equal(t, 1.2, quantileSamples[0].v)
+	assert.Equal(t, "0.9", quantileSamples[1].labels.Get("quantile"))
+	assert.Equal(t, 3.4, quantileSamples[1].v)
+	assert.Equal(t, "0.99", quantileSamples[2].labels.Get("quantile"))
+	assert.Equal(t, 8.9, quantileSamples[2].v)
+	sumSamples := findSamples(app.samples, "request_duration_sum")
+	require.Len(t, sumSamples, 1)
+	assert.Equal(t, 456.78, sumSamples[0].v)
+	countSamples := findSamples(app.samples, "request_duration_count")
+	require.Len(t, countSamples, 1)
+	assert.Equal(t, 100.0, countSamples[0].v)
+}
+
+func TestTranslateSchemaURL(t *testing.T) {
+	t.Parallel()
+	cfg := defaultTranslationConfig()
+	cfg.SchemaURL = true
+	tr := NewTranslator(testLogger(), cfg)
+	app := &recordingAppender{}
+	req := &colmetricspb.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metricspb.ResourceMetrics{{
+			SchemaUrl: "https://opentelemetry.io/schemas/1.21.0",
+			ScopeMetrics: []*metricspb.ScopeMetrics{{
+				Metrics: []*metricspb.Metric{{
+					Name: "up",
+					Data: &metricspb.Metric_Gauge{Gauge: &metricspb.Gauge{
+						DataPoints: []*metricspb.NumberDataPoint{{
+							TimeUnixNano: 1000000000000,
+							Value:        &metricspb.NumberDataPoint_AsDouble{AsDouble: 1},
+						}},
+					}},
+				}},
+			}},
+		}},
+	}
+	count, err := tr.Translate(req, app)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Equal(t, "https://opentelemetry.io/schemas/1.21.0", app.samples[0].labels.Get("__schema_url__"))
+}
+
+func TestTranslateSchemaURLScopeOverride(t *testing.T) {
+	t.Parallel()
+	cfg := defaultTranslationConfig()
+	cfg.SchemaURL = true
+	tr := NewTranslator(testLogger(), cfg)
+	app := &recordingAppender{}
+	req := &colmetricspb.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metricspb.ResourceMetrics{{
+			SchemaUrl: "https://opentelemetry.io/schemas/1.20.0",
+			ScopeMetrics: []*metricspb.ScopeMetrics{{
+				SchemaUrl: "https://opentelemetry.io/schemas/1.21.0",
+				Metrics: []*metricspb.Metric{{
+					Name: "up",
+					Data: &metricspb.Metric_Gauge{Gauge: &metricspb.Gauge{
+						DataPoints: []*metricspb.NumberDataPoint{{
+							TimeUnixNano: 1000000000000,
+							Value:        &metricspb.NumberDataPoint_AsDouble{AsDouble: 1},
+						}},
+					}},
+				}},
+			}},
+		}},
+	}
+	count, err := tr.Translate(req, app)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Equal(t, "https://opentelemetry.io/schemas/1.21.0", app.samples[0].labels.Get("__schema_url__"))
+}
+
+func TestTranslateSchemaURLDisabled(t *testing.T) {
+	t.Parallel()
+	cfg := defaultTranslationConfig()
+	cfg.SchemaURL = false
+	tr := NewTranslator(testLogger(), cfg)
+	app := &recordingAppender{}
+	req := &colmetricspb.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metricspb.ResourceMetrics{{
+			SchemaUrl: "https://opentelemetry.io/schemas/1.21.0",
+			ScopeMetrics: []*metricspb.ScopeMetrics{{
+				Metrics: []*metricspb.Metric{{
+					Name: "up",
+					Data: &metricspb.Metric_Gauge{Gauge: &metricspb.Gauge{
+						DataPoints: []*metricspb.NumberDataPoint{{
+							TimeUnixNano: 1000000000000,
+							Value:        &metricspb.NumberDataPoint_AsDouble{AsDouble: 1},
+						}},
+					}},
+				}},
+			}},
+		}},
+	}
+	count, err := tr.Translate(req, app)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Equal(t, "", app.samples[0].labels.Get("__schema_url__"))
+}
+
+func findSamples(samples []recordedSample, name string) []recordedSample {
+	var result []recordedSample
+	for _, s := range samples {
+		if s.labels.Get("__name__") == name {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+func findSamplesWithLabel(samples []recordedSample, labelName, labelValue string) []recordedSample {
+	var result []recordedSample
+	for _, s := range samples {
+		if s.labels.Get(labelName) == labelValue {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
 // Test helpers
 
 type recordedSample struct {

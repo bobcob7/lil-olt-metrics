@@ -182,6 +182,8 @@ type TranslationConfig struct {
 	SanitizeMetricNames bool                     `yaml:"sanitize_metric_names"`
 	AddUnitSuffix       bool                     `yaml:"add_unit_suffix"`
 	AddTypeSuffix       bool                     `yaml:"add_type_suffix"`
+	DeltaConversion     bool                     `yaml:"delta_conversion"`
+	SchemaURL           bool                     `yaml:"schema_url"`
 }
 
 // ResourceAttributesConfig holds resource attribute mapping settings.
@@ -270,6 +272,8 @@ func newDefaults() *Config {
 			SanitizeMetricNames: true,
 			AddUnitSuffix:       true,
 			AddTypeSuffix:       true,
+			DeltaConversion:     true,
+			SchemaURL:           true,
 		},
 	}
 }
