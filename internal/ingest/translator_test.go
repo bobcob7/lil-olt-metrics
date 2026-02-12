@@ -368,7 +368,10 @@ type recordedSample struct {
 }
 
 type recordingAppender struct {
-	samples []recordedSample
+	samples    []recordedSample
+	committed  bool
+	rolledBack bool
+	commitErr  error
 }
 
 func (a *recordingAppender) Append(_ storage.SeriesRef, l labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
@@ -376,8 +379,18 @@ func (a *recordingAppender) Append(_ storage.SeriesRef, l labels.Labels, t int64
 	return 0, nil
 }
 
-func (a *recordingAppender) Commit() error   { return nil }
-func (a *recordingAppender) Rollback() error { return nil }
+func (a *recordingAppender) Commit() error {
+	if a.commitErr != nil {
+		return a.commitErr
+	}
+	a.committed = true
+	return nil
+}
+
+func (a *recordingAppender) Rollback() error {
+	a.rolledBack = true
+	return nil
+}
 
 func strAttr(key, value string) *commonpb.KeyValue {
 	return &commonpb.KeyValue{
