@@ -1,4 +1,4 @@
-# Plan 12 — Integration Tests
+# COMPLETE Plan 12 — Integration Tests
 
 ## Summary
 

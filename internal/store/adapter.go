@@ -97,14 +97,14 @@ func (it *sampleIterator) Next() chunkenc.ValueType {
 }
 
 func (it *sampleIterator) Seek(t int64) chunkenc.ValueType {
+	if it.idx < 0 {
+		it.idx = 0
+	}
 	for it.idx < len(it.samples) {
-		it.idx++
-		if it.idx >= len(it.samples) {
-			return chunkenc.ValNone
-		}
 		if it.samples[it.idx].T >= t {
 			return chunkenc.ValFloat
 		}
+		it.idx++
 	}
 	return chunkenc.ValNone
 }
