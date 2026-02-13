@@ -1,0 +1,16 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "cmd/server",
+  "git_ref": "466445a",
+  "updated_at": "2026-02-13T23:38:07Z",
+  "sections": {
+    "description": "Application entrypoint for lil-olt-metrics gRPC and HTTP metrics server. Contains main.go which orchestrates the entire application lifecycle: configuration loading, component wiring, multi-protocol listener setup, graceful shutdown handling, and signal management.",
+    "purpose": "Serve as the single entry point for the metrics server application. Responsible for initializing all internal components (store, translator, ingestion handlers, query API), starting multiple network listeners (gRPC OTLP, HTTP OTLP, HTTP Prometheus), coordinating their operation, and ensuring graceful shutdown on termination signals.",
+    "functionality": "1. Parses command-line flags (-config, -version) and loads application configuration from file. 2. Builds structured logger with configurable levels and formats. 3. Creates appropriate storage backend (filesystem, Prometheus remote, VictoriaMetrics remote, or in-memory) based on config. 4. Wires the OTLP translator component for metric data transformation. 5. Conditionally starts gRPC server for OTLP/gRPC metrics ingestion. 6. Conditionally starts HTTP server for OTLP/HTTP metrics ingestion. 7. Starts HTTP server with Prometheus-compatible query API and health check. 8. Sets up signal handling for SIGINT/SIGTERM. 9. Monitors all servers for errors and coordinates graceful shutdown with 30-second timeout.",
+    "strengths": "Clean separation of concerns with dedicated functions for each startup component (startGRPC, startOTLPHTTP, startQueryAPI, createStore). Uses signal context for clean shutdown. Configurable logging. Flexible storage backend selection. Conditional protocol enablement via config. Proper error handling with early returns and meaningful error messages.",
+    "weaknesses": "Error channel capacity is hardcoded (3) with comment but could be more flexible. Logger setup and config loading could be extracted to separate functions for improved testability. No metrics or observability for server startup/shutdown timing. Gzip option set but never used in gRPC config. Limited validation of listening address format.",
+    "test_coverage": "None - this is the main entrypoint and contains mostly orchestration/wiring logic. Testing would require mocking net.Listen, signal handling, and server Start/Serve methods. Integration tests in internal/integration/ test the full application stack end-to-end.",
+    "dependencies": "Internal: config (configuration loading), ingest (OTLP handlers and translator), query (Prometheus-compatible query API), store (metric storage backends). External: slog (logging), flag (CLI), net/http and google.golang.org/grpc (network servers), prometheus/promql (query engine), go.opentelemetry.io/proto/otlp (OTLP service definitions).",
+    "files": "main.go - Single file containing main entry point, logger factory, and all server startup functions."
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "internal/ingest",
+  "git_ref": "466445a",
+  "updated_at": "2026-02-13T23:38:19Z",
+  "sections": {
+    "description": "OTLP metric ingestion package that receives OpenTelemetry metrics via gRPC (port 4317) and HTTP (port 4318) endpoints, translates them to Prometheus-compatible format, and stores them via the Appender interface.",
+    "purpose": "Converts OTLP metric exports into Prometheus samples with configurable transformations. Handles two transport protocols (gRPC and HTTP with protobuf/JSON), metric type mapping (Gauge, Sum, Histogram, ExponentialHistogram, Summary), aggregation temporality (delta-to-cumulative conversion), and label construction from resource/scope/metric attributes.",
+    "strengths": [
+      "Complete OTLP metric type support including ExponentialHistogram and Summary",
+      "Configurable metric name sanitization, unit suffix addition, and type suffix (_total) injection",
+      "Delta-to-cumulative conversion with TTL-based stale entry eviction (10-minute TTL)",
+      "Comprehensive label handling: resource attributes mapping/promotion, scope labels (otel_scope_name/version), and metric attributes",
+      "Dual transport support: gRPC (native) and HTTP with automatic protobuf/JSON detection and gzip decompression",
+      "Graceful partial success handling with error messages returned to clients",
+      "Thread-safe delta accumulation with mutex protection and proper cleanup",
+      "Exemplar extraction from OTLP exemplars to Prometheus format (trace_id, span_id, filtered_attributes)",
+      "Schema URL support with configurable inclusion as __schema_url__ label"
+    ],
+    "weaknesses": [
+      "Delta-to-cumulative conversion relies on label set hash for tracking\u2014collision risk is low but not zero",
+      "Fixed 10-minute TTL for delta entries not configurable; stale entries only evicted on write operations",
+      "HTTP handler maxBodySize is passed per-request, not enforced at construction level",
+      "ExponentialHistogram bucket computation depends on scale parameter; edge cases (very large negative scales) may cause precision loss",
+      "No built-in metrics/observability on translation failures or partial successes beyond logging",
+      "Schema URL handling overwrites across resource/scope levels (scope overrides resource) without explicit precedence documentation",
+      "Resource attribute promotion is case-sensitive; no glob patterns or regex matching supported"
+    ],
+    "test_coverage": [
+      "GRPCHandler: 6 tests covering success, nil/empty requests, partial success, translation errors, and commit failures",
+      "HTTPHandler: 9 tests covering protobuf/JSON, gzip compression, malformed payloads, method validation, partial success, and commit errors",
+      "Translator: 20+ tests covering gauge (int/double), monotonic/non-monotonic sums, histograms, exponential histograms, summaries, sanitization, unit suffixes, exemplar extraction, delta conversion, schema URLs, resource/scope attribute handling, and edge cases",
+      "All tests use t.Parallel(), t.Context(), and moq-generated mocks",
+      "Test helpers: recordingAppender (tracks commits/rollbacks/samples), recordedSample type, test config builders"
+    ],
+    "dependencies": [
+      "go.opentelemetry.io/proto/otlp/collector/metrics/v1 (OTLP protocol buffers)",
+      "go.opentelemetry.io/proto/otlp/metrics/v1 (OTLP metric definitions)",
+      "go.opentelemetry.io/proto/otlp/common/v1 (OTLP common types: KeyValue, AnyValue, InstrumentationScope)",
+      "go.opentelemetry.io/proto/otlp/resource/v1 (OTLP resource definition)",
+      "github.com/prometheus/prometheus/model/labels (Prometheus label handling)",
+      "google.golang.org/grpc (gRPC framework and status codes)",
+      "google.golang.org/protobuf/encoding/protojson (JSON marshaling for protobuf)",
+      "google.golang.org/protobuf/proto (protobuf unmarshaling)",
+      "internal/config (TranslationConfig with ResourceAttributesConfig)",
+      "internal/store (Appender interface for sample persistence)"
+    ],
+    "functionality": [
+      "GRPCHandler.Export: Receives OTLP metrics via gRPC, coordinates translation, handles commit/rollback, returns partial success responses",
+      "HTTPHandler.ServeHTTP: POST /v1/metrics endpoint handling with Content-Type detection (protobuf/JSON), gzip decompression, request validation",
+      "Translator.Translate: Main entry point converting ExportMetricsServiceRequest to samples; iterates resource\u2192scope\u2192metric hierarchy",
+      "Translator metric type handlers: translateGauge, translateSum, translateHistogram, translateExponentialHistogram, translateSummary each producing type-specific samples",
+      "Label building: resourceLabels (LabelMap lookup + Promote filter), scopeLabels (otel_scope_name/version), attribute sanitization",
+      "Delta-to-cumulative: accumulateDelta tracks label\u2192cumulative value mapping with TTL; evictStale removes entries older than 10 minutes",
+      "Metric name sanitization: converts dots/dashes to underscores, collapses consecutive underscores, handles leading digits, respects colons",
+      "Unit/type suffix injection: addUnitSuffix maps unit codes (s\u2192seconds, ms\u2192milliseconds, etc.); addTypeSuffix appends _total to monotonic sums",
+      "Exemplar extraction: ExtractExemplars converts OTLP exemplars to Prometheus format with trace_id/span_id hex encoding and filtered_attributes",
+      "Error handling: Translates per-metric failures to error returns with sample count; handlers commit partial results when samples > 0"
+    ],
+    "files": [
+      "interfaces.go: metricsTranslator and metricsStore interfaces; moq code generation directive",
+      "grpc.go: GRPCHandler struct, NewGRPCHandler constructor, Export method with transaction semantics",
+      "http.go: HTTPHandler struct, NewHTTPHandler constructor, ServeHTTP method with protobuf/JSON/gzip support, readBody and writeResponse helpers",
+      "translator.go: Translator struct with Translate method, metric type handlers, label builders, delta tracking, name/label sanitization, exemplar extraction, unit map, comprehensive helper functions",
+      "grpc_test.go: 6 tests for GRPCHandler covering success/error paths, uses recordingAppender helper",
+      "http_test.go: 9 tests for HTTPHandler covering transport/content-type variants and error paths",
+      "translator_test.go: 20+ table-driven tests for metric types, sanitization, delta conversion, exemplars; helper functions and test configuration builders",
+      "moq_test.go: Generated mocks for metricsTranslator and metricsStore interfaces"
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "internal/query",
+  "git_ref": "466445a",
+  "updated_at": "2026-02-13T23:38:08Z",
+  "sections": {
+    "description": "Prometheus-compatible HTTP query API implementation that provides instant queries, range queries, series discovery, label querying, and build information endpoints.",
+    "purpose": "Wires the Prometheus PromQL engine to the metrics store's Queryable adapter, exposing all standard Prometheus HTTP API endpoints for time series querying and metadata retrieval.",
+    "strengths": [
+      "Full Prometheus API compatibility - implements all standard /api/v1 endpoints (query, query_range, series, labels, label values, metadata, buildinfo)",
+      "Robust parameter parsing - handles both RFC3339 and Unix timestamp formats for time parameters, supports both Go duration and seconds notation for step",
+      "Comprehensive error handling - distinguishes between query cancellation, timeout, storage, and execution errors with appropriate Prometheus error types",
+      "Clean dependency injection - constructor takes logger, queryable, engine, and build info; no global state",
+      "Well-structured response formatting - standardized apiResponse format matching Prometheus spec with proper status, error, and warning fields"
+    ],
+    "weaknesses": [
+      "Limited error logging - only logs errors when closing queriers; other errors are silently returned in JSON responses without server-side logging context",
+      "Metadata endpoint stub - /api/v1/metadata returns empty object rather than actual metric metadata",
+      "No input validation for max samples or memory limits - relies entirely on engine configuration",
+      "Missing query validation warnings - doesn't surface potential issues like large time ranges to clients"
+    ],
+    "test_coverage": "High test coverage with parallel subtests for: instant query (GET and POST), range query, series endpoint, label names, label values, metadata, buildinfo, invalid query syntax, missing parameters. Uses testify assert/require and helper functions for common test patterns.",
+    "dependencies": [
+      "github.com/prometheus/prometheus/model/labels - label manipulation",
+      "github.com/prometheus/prometheus/promql - PromQL engine for query execution",
+      "github.com/prometheus/prometheus/promql/parser - metric selector parsing",
+      "github.com/prometheus/prometheus/storage - Queryable interface for data access",
+      "internal/store - provides Queryable adapter (store.NewQueryable) and in-memory store for testing",
+      "log/slog - structured logging"
+    ],
+    "functionality": [
+      "Instant Query (/api/v1/query) - single point-in-time metric values with optional time parameter (defaults to now)",
+      "Range Query (/api/v1/query_range) - time series data over range with required start, end, step parameters",
+      "Series (/api/v1/series) - find all series matching label selectors via match[] parameter",
+      "Label Names (/api/v1/labels) - list all label names in database with optional start/end time range",
+      "Label Values (/api/v1/label/{name}/values) - list all values for a specific label with optional time range",
+      "Metadata (/api/v1/metadata) - returns empty object (placeholder for metric metadata)",
+      "Build Info (/api/v1/status/buildinfo) - version, revision, branch, build date, Go version",
+      "HTTP Handler - registers all routes on http.ServeMux, supports both GET and POST with form-encoded parameters"
+    ],
+    "files": [
+      "api.go - main API implementation with all endpoint handlers, parameter parsing helpers, response formatting, error classification",
+      "api_test.go - comprehensive test suite covering all endpoints, error cases, parameter validation"
+    ]
+  }
+}

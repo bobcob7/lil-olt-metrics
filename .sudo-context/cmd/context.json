@@ -1,0 +1,16 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "cmd",
+  "git_ref": "466445a",
+  "updated_at": "2026-02-13T23:38:56Z",
+  "sections": {
+    "description": "Parent directory containing application entrypoints and binary configurations for lil-olt-metrics. Currently contains the server subdirectory which holds the main gRPC/HTTP metrics ingest server.",
+    "purpose": "Serve as the location for all CLI and server binary entrypoints. Follows the Go project layout convention where cmd/ houses main packages for executables.",
+    "functionality": "The directory organizes application entrypoints by binary. Currently houses cmd/server/main.go which implements the core lil-olt-metrics server with support for: OTLP metrics ingestion via gRPC and HTTP, Prometheus-compatible query API, configurable storage backends (filesystem, Prometheus remote write, VictoriaMetrics), graceful shutdown handling, and structured logging.",
+    "files": "| File/Directory | Purpose |\n|---|---|\n| server/ | Main server entrypoint containing main.go |",
+    "strengths": "Clean separation of concerns with entrypoint logic isolated from core business logic. Server startup orchestrates all components (storage, ingestion, querying) with proper dependency injection. Graceful shutdown handling with configurable timeouts. Error propagation via channels prevents blocking on individual server failures.",
+    "weaknesses": "Only a single binary (server) is currently implemented. Could benefit from additional CLI utilities for admin tasks (data migration, maintenance). No integration tests for the full server startup and shutdown sequence.",
+    "test_coverage": "No test coverage present in cmd/ directory. The main.go functions (run, createStore, buildLogger, startGRPC, startOTLPHTTP, startQueryAPI) are not unit tested.",
+    "dependencies": "Imports: config (loading YAML configuration), ingest (metrics translation and gRPC/HTTP handlers), query (Prometheus API implementation), store (metrics storage abstraction), Prometheus PromQL engine, OpenTelemetry protobuf definitions, gRPC and HTTP standard libraries."
+  }
+}

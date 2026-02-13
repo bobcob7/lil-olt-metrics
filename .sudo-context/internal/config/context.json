@@ -1,0 +1,44 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "internal/config",
+  "git_ref": "466445a",
+  "updated_at": "2026-02-13T23:38:08Z",
+  "sections": {
+    "description": "Configuration package for lil-olt-metrics that handles loading and parsing of application settings from YAML files, environment variables, and sensible defaults.",
+    "purpose": "Provides centralized configuration management with a hierarchical Config struct that encompasses server settings, OTLP ingestion endpoints, Prometheus query API parameters, storage backend configuration, data retention policies, and OTLP-to-Prometheus translation rules. Enables runtime configuration via YAML files and environment variable overrides with LOM_ prefix.",
+    "strengths": [
+      "Comprehensive configuration hierarchy covering all system components",
+      "Custom YAML unmarshalers for Duration (supporting days suffix) and ByteSize (supporting KB/MB/GB suffixes) enabling human-readable configuration",
+      "Three-tier precedence system: defaults > YAML file > environment variables",
+      "Extensive validation with clear error messages for invalid values and missing required fields",
+      "Reflection-based environment variable override system that recursively applies LOM_ prefixed overrides to nested struct fields",
+      "Support for multiple storage backends (filesystem, Prometheus remote write, VictoriaMetrics) with appropriate validation",
+      "Well-tested with 25+ test cases covering defaults, YAML loading, env overrides, type conversions, validation, and precedence rules"
+    ],
+    "weaknesses": [
+      "Limited validation for certain numeric bounds (e.g., max samples could have upper limits)",
+      "No support for loading from multiple config files or config directories",
+      "Config struct is quite large (11 nested types); could benefit from grouping related config sections",
+      "Maps and slices (LabelMap, Promote) skip environment variable overrides due to reflection limitations"
+    ],
+    "test_coverage": "Comprehensive test coverage with 25 test cases: TestLoadDefaults, TestLoadYAMLOverride, TestLoadYAMLPreservesDefaults, TestEnvOverride, TestEnvOverrideDuration, TestEnvOverrideByteSize, TestEnvTakesPrecedenceOverYAML, TestValidateInvalidLogLevel, TestValidateInvalidLogFormat, TestValidateInvalidEngine, TestValidatePrometheusEngineRequiresURLs, TestValidateVictoriaMetricsEngineRequiresURLs, TestValidatePrometheusEngineWithURLsSucceeds, TestValidateInvalidPort, TestValidateNegativeMaxRecvMsgSize, TestLoadInvalidYAMLPath, TestParseDuration (4 subtests), TestParseByteSize (5 subtests), TestEnvOverrideBool. All tests use t.Parallel() and follow table-driven patterns where appropriate. Happy paths, edge cases, validation errors, and precedence rules are all tested.",
+    "dependencies": [
+      "gopkg.in/yaml.v3 - YAML parsing library for unmarshaling config files",
+      "github.com/stretchr/testify - Test assertion library (assert, require packages) used in test suite"
+    ],
+    "functionality": [
+      "Load(path string) - Main entry point that loads configuration from defaults, optional YAML file, and environment variable overrides, then validates the result",
+      "newDefaults() - Creates Config struct with sensible defaults for all components",
+      "loadYAML(c *Config, path string) - Unmarshals YAML file into Config struct",
+      "applyEnvOverrides() - Recursively applies LOM_ prefixed environment variable overrides using reflection, with special handling for Duration and ByteSize types",
+      "validate() - Validates configuration values including log levels/formats, engine types, port numbers, required URLs for remote backends, positive constraints",
+      "Duration custom type - Wraps time.Duration with YAML unmarshaler supporting '15d' syntax in addition to standard Go duration format",
+      "ByteSize custom type - Wraps int64 with YAML unmarshaler supporting 'KB', 'MB', 'GB' suffixes in addition to raw bytes",
+      "Helper functions: parseDuration, parseByteSize, validateListen, setFieldFromString"
+    ],
+    "files": [
+      "config.go - Main configuration implementation with all types and logic (488 lines)",
+      "config_test.go - Comprehensive test suite with 25 test cases (296 lines)"
+    ]
+  }
+}

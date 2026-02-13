@@ -1,0 +1,16 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "internal",
+  "git_ref": "466445a",
+  "updated_at": "2026-02-13T23:39:13Z",
+  "sections": {
+    "description": "Parent directory containing all internal packages for the lil-olt-metrics server. Organizes functionality into distinct domains: configuration, metric ingestion, storage backends, and Prometheus-compatible querying.",
+    "purpose": "Provides the core business logic and infrastructure for an OpenTelemetry metrics collector that stores metrics in multiple backends and exposes a Prometheus-compatible query API.",
+    "functionality": "Routes OTLP metric traffic through gRPC and HTTP handlers into various storage backends (in-memory, filesystem with WAL, Prometheus Remote Write, VictoriaMetrics). Exposes a Prometheus query API compatible with PromQL and Grafana. Manages configuration via YAML files with support for environment variable overrides and intelligent duration/size parsing.",
+    "strengths": "Well-organized package structure with clear separation of concerns. Comprehensive test coverage (14 test files) with integration tests validating end-to-end flows. Uses interfaces defined at consumption points (config, ingest, query packages depend on store interfaces). Code generation via moq for deterministic mocks. Follows Go best practices from user standards: unexported by default, constructor injection, slog structured logging.",
+    "weaknesses": "Query API functionality limited to basic PromQL operations via Prometheus library; custom query extensions require modifying the query package. Storage adapters (Prometheus Remote, VictoriaMetrics) have integration tests but runtime reliability depends on external services. Config package has complex YAML unmarshaling logic that could benefit from additional property-based testing.",
+    "test_coverage": "14 test files across all packages: config/, ingest/, store/, and query/. Each major package has integration/unit tests. integration/ package provides end-to-end testing of the full stack. Tests use t.Parallel(), t.Context(), and slog with io.Discard logger. Uses testify assert/require and moq-generated mocks.",
+    "dependencies": "External: github.com/prometheus/prometheus (PromQL engine, storage interfaces), go.opentelemetry.io/proto/otlp (OTLP protocol), google.golang.org/grpc (gRPC transport), gopkg.in/yaml.v3 (config parsing), github.com/golang/snappy (compression). Internal: config provides TranslationConfig and ByteSize/Duration types. ingest depends on store.Appender and store.Store interfaces. query depends on storage.Queryable interface. All storage backends implement store.Store.",
+    "files": "Subdirectories: config/ (YAML config loading, duration/bytesize parsing), ingest/ (gRPC/HTTP OTLP handlers, metric translation), store/ (Store/Appender interfaces, MemStore, FSStore with WAL, Prometheus Remote, VictoriaMetrics adapters), query/ (Prometheus-compatible HTTP API), integration/ (end-to-end tests), tools/ (tool version pinning). No direct .go files in internal/ root."
+  }
+}

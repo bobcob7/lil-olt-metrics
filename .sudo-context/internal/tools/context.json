@@ -1,0 +1,16 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "internal/tools",
+  "git_ref": "466445a",
+  "updated_at": "2026-02-13T23:38:14Z",
+  "sections": {
+    "description": "Go tools package that manages development tool dependencies using the go:build tools pattern. This directory contains a single tools.go file with blank imports of build tools, allowing their versions to be pinned in go.mod for reproducible builds across the team.",
+    "purpose": "Centralize and version-lock development tools (linters, code generators, formatters) so all developers use identical tool versions. Prevents version drift and ensures consistent code quality and generation output.",
+    "strengths": "Follows Go best practices for tool management; single source of truth for tool versions in go.mod; enables reproducible builds with 'make generate' entry point; clean separation from application code; build-tag isolation prevents tool code from being linked into binaries.",
+    "weaknesses": "Requires developers to understand go:build tools pattern; go.mod can become cluttered with tool dependencies; tool installation still requires manual make target rather than automatic dependency resolution; no package exports, so directory serves only for tooling.",
+    "test_coverage": "No test coverage. This is a tooling-only package; behavior is verified by CI/CD pipeline (code generation, linting results).",
+    "dependencies": "External: github.com/golangci/golangci-lint (v1.64.8, linter), github.com/matryer/moq (v0.6.0, mock generator), mvdan.cc/gofumpt (v0.9.2, Go formatter). No internal dependencies.",
+    "functionality": "Manages three core development tools: golangci-lint for static code analysis, moq for generating mocks from interfaces in test files (moq_test.go), and gofumpt for strict Go code formatting. Versions are pinned in go.mod and installed via 'go install' commands invoked by build system.",
+    "files": "tools.go (10 lines): Core file with go:build tools tag and blank imports of three development tools (golangci-lint, moq, gofumpt). Each import pins that tool's version as declared in go.mod."
+  }
+}

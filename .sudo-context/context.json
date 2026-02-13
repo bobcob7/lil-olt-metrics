@@ -1,0 +1,28 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": ".",
+  "git_ref": "466445a",
+  "updated_at": "2026-02-13T23:40:05Z",
+  "sections": {
+    "description": "lil-olt-metrics is a minimal, single-process metrics server that ingests OpenTelemetry Protocol (OTLP) metrics via gRPC and HTTP and serves them via the Prometheus HTTP API. It combines OTLP ingestion, metric translation to Prometheus data model, pluggable storage backends (filesystem, Prometheus remote write, VictoriaMetrics), and a full PromQL query engine. Designed for edge deployments, dev environments, and lightweight production use with zero-config startup and no external dependencies.",
+    "purpose": "Provide a lightweight, self-contained metrics aggregation and querying system for OTLP-based observability workflows. Act as a bridge between OTel metric sources and Prometheus-compatible monitoring stacks like Grafana, enabling metrics collection without heavyweight infrastructure.",
+    "strengths": [
+      "Zero-config startup with sensible defaults; runs as single binary with no external dependencies",
+      "Full OTLP feature support: all metric types (Gauge, Sum, Histogram, ExponentialHistogram, Summary), protobuf and JSON, gzip compression, delta-to-cumulative conversion",
+      "Complete Prometheus API compatibility including instant/range queries, series, labels, metadata, buildinfo endpoints; PromQL engine embedded and functional",
+      "Multiple pluggable storage backends: built-in filesystem with WAL and block compaction, Prometheus remote write/read, VictoriaMetrics import/export",
+      "Production-ready: data retention policies (age/size), graceful shutdown, gRPC/HTTP error handling, structured logging with slog",
+      "Well-organized codebase following Go best practices: unexported by default, dependency injection, interfaces at consumer site, moq-generated mocks, parallel tests with t.Parallel()"
+    ],
+    "weaknesses": [
+      "Single-process design limits horizontal scalability; not suitable for high-cardinality distributed metrics at scale",
+      "Filesystem storage backend lacks distributed clustering; remote backends (Prometheus, VictoriaMetrics) required for HA",
+      "Delta-to-cumulative conversion with TTL eviction may lose state during restarts",
+      "Limited metric cardinality handling compared to production-grade systems; memory footprint grows with unique label combinations"
+    ],
+    "test_coverage": "Comprehensive test suite across all packages. cmd/server: integration with graceful shutdown, flag parsing. internal/config: YAML loading, defaults, env var override. internal/ingest: OTLP gRPC/HTTP handlers, protobuf/JSON parsing, translator logic. internal/store: filesystem WAL/compaction, Prometheus remote write/read, VictoriaMetrics. internal/query: Prometheus API endpoints. internal/integration: end-to-end tests with telemetry generation. All tests use t.Parallel(), t.Context(), moq mocks, structured logging. No integration tests requiring external services.",
+    "dependencies": "Core: prometheus/prometheus (PromQL engine, data model), go.opentelemetry.io/proto/otlp (OTLP Protobuf definitions), google.golang.org/grpc (gRPC server), google.golang.org/protobuf (Protobuf runtime), gopkg.in/yaml.v3 (config parsing), golang/snappy (WAL compression). Dev: golangci-lint v1.64.8, moq v0.6.0, testify v1.11.1, gofumpt v0.9.2. Go 1.25.5 minimum. Dockerfile uses golang:1.25-alpine builder, distroless static-debian12 runtime.",
+    "functionality": "1. Ingestion: gRPC (port 4317) and HTTP (port 4318) endpoints accept OTLP ExportMetricsServiceRequest. 2. Translation: Converts OTLP metric types to Prometheus samples, applies unit suffixes, maps resource attributes to labels, records schema URLs. 3. Storage: Samples written via Appender interface to configured backend (FS, Prometheus, VictoriaMetrics). 4. Query: Prometheus HTTP API (/api/v1/*) backed by embedded PromQL engine for instant/range queries, series metadata, label enumeration, metadata lookup. 5. Configuration: Loaded from env vars (LOM_* prefix), YAML file, or defaults. 6. Lifecycle: Graceful shutdown on SIGTERM/SIGINT, drain in-flight requests, close backends.",
+    "files": "Root: go.mod, go.sum (Go dependencies), Makefile (build/test/lint/fmt targets), .golangci.yml (linter config: errcheck, govet, staticcheck, revive, unused, ineffassign), README.md (overview, quickstart, architecture, configuration examples), CHANGELOG.md (v0.1.0 release notes), Dockerfile (multi-stage Alpine builder, distroless runtime), docker-compose.yml (server + Grafana integration), .gitignore, grafana-datasource.yml. Subdirs: cmd/server/ (main.go entrypoint, flag parsing, wiring), internal/{config,ingest,query,store,integration,tools}/ (packages), docs/ (architecture, OTLP/Prometheus API reference), plans/ (roadmap). CI/CD: .github/workflows/{ci.yml (lint/test), release.yml (build/publish)}."
+  }
+}
