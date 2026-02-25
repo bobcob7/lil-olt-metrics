@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Metrics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --pink: #f778ba;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 1.5rem;
+    min-height: 100vh;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  header h1 { font-size: 1.5rem; font-weight: 600; }
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle-label input { accent-color: var(--accent); }
+  select {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  select:focus { outline: 1px solid var(--accent); }
+  #error-banner {
+    background: rgba(248,81,73,0.15);
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    display: none;
+    font-size: 0.85rem;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+  .card-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .card-sub {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+  .panel h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  .chart-container {
+    position: relative;
+    width: 100%;
+    height: 280px;
+  }
+  .chart-container.tall { height: 320px; }
+  .chart-container.short { height: 220px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.num { text-align: right; }
+  .gauge-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+  .gauge-value {
+    font-size: 3rem;
+    font-weight: 700;
+  }
+  .gauge-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+  }
+  details {
+    margin-bottom: 1.5rem;
+  }
+  details summary {
+    font-size: 1.15rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.75rem 0;
+    color: var(--text);
+    list-style: disclosure-closed;
+    user-select: none;
+  }
+  details[open] summary {
+    list-style: disclosure-open;
+    margin-bottom: 1rem;
+  }
+  details summary:hover {
+    color: var(--accent);
+  }
+  @media (max-width: 500px) {
+    .grid { grid-template-columns: 1fr; }
+    .cards { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Claude Code Metrics</h1>
+  <div class="header-controls">
+    <select id="time-range">
+      <option value="1m">1m</option>
+      <option value="5m">5m</option>
+      <option value="30m">30m</option>
+      <option value="1h">1h</option>
+      <option value="4h">4h</option>
+      <option value="8h">8h</option>
+      <option value="24h">24h</option>
+      <option value="2d">2d</option>
+      <option value="7d">7d</option>
+      <option value="14d">14d</option>
+      <option value="30d" selected>30d</option>
+      <option value="90d">90d</option>
+    </select>
+    <label class="toggle-label">
+      <input type="checkbox" id="auto-refresh" checked>
+      Auto-refresh (30s)
+    </label>
+    <span id="last-updated">--</span>
+  </div>
+</header>
+
+<div id="error-banner"></div>
+
+<div class="cards">
+  <div class="card">
+    <div class="card-label">Total Tokens</div>
+    <div class="card-value" id="total-tokens">--</div>
+    <div class="card-sub" id="total-tokens-sub"></div>
+  </div>
+  <div class="card">
+    <div class="card-label">Total Cost</div>
+    <div class="card-value" id="total-cost">--</div>
+    <div class="card-sub" id="total-cost-sub"></div>
+  </div>
+  <div class="card">
+    <div class="card-label">Active Time</div>
+    <div class="card-value" id="active-time">--</div>
+    <div class="card-sub" id="active-time-sub"></div>
+  </div>
+  <div class="card">
+    <div class="card-label">Sessions</div>
+    <div class="card-value" id="session-count">--</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Tokens Over Time</h2>
+    <div class="chart-container tall"><canvas id="tokens-time-chart"></canvas></div>
+  </div>
+  <div class="panel">
+    <h2>Cost Over Time</h2>
+    <div class="chart-container tall"><canvas id="cost-time-chart"></canvas></div>
+  </div>
+</div>
+
+<details open>
+  <summary>Token Breakdown</summary>
+  <div class="grid">
+    <div class="panel">
+      <h2>Tokens by Model</h2>
+      <div class="chart-container tall"><canvas id="tokens-chart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Cost by Model</h2>
+      <div class="chart-container"><canvas id="cost-donut"></canvas></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:1rem">
+    <h2>Token Details</h2>
+    <div style="overflow-x:auto">
+      <table id="token-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th class="num">Input</th>
+            <th class="num">Output</th>
+            <th class="num">Cache Read</th>
+            <th class="num">Cache Create</th>
+            <th class="num">Total</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</details>
+
+<details>
+  <summary>Efficiency & Cost Analysis</summary>
+  <div class="grid">
+    <div class="panel">
+      <h2>Cache Efficiency</h2>
+      <div class="gauge-wrap" id="cache-gauge">
+        <div class="gauge-value" id="cache-pct">--</div>
+        <div class="gauge-label">cache read / (cache read + input)</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Token Type Distribution</h2>
+      <div class="chart-container"><canvas id="token-pie"></canvas></div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <h2>Cost per 1K Tokens by Model</h2>
+      <div class="chart-container"><canvas id="cost-per-1k"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Active Time by Session</h2>
+      <div class="chart-container"><canvas id="activity-chart"></canvas></div>
+    </div>
+  </div>
+</details>
+
+<script>
+const PROM_URL = 'http://localhost:9090';
+const REFRESH_INTERVAL = 30000;
+let refreshTimer = null;
+
+const COLORS = {
+  input: '#58a6ff',
+  output: '#3fb950',
+  cacheRead: '#d29922',
+  cacheCreation: '#bc8cff',
+};
+const MODEL_COLORS = ['#58a6ff','#3fb950','#d29922','#bc8cff','#f778ba','#f85149','#79c0ff','#7ee787'];
+
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
+
+const STEP_MAP = {
+  '1m': '5s', '5m': '15s', '30m': '30s', '1h': '1m', '4h': '5m',
+  '8h': '10m', '24h': '30m', '2d': '1h', '7d': '4h', '14d': '8h',
+  '30d': '12h', '90d': '1d',
+};
+const RANGE_SECONDS = {
+  '1m': 60, '5m': 300, '30m': 1800, '1h': 3600, '4h': 14400,
+  '8h': 28800, '24h': 86400, '2d': 172800, '7d': 604800, '14d': 1209600,
+  '30d': 2592000, '90d': 7776000,
+};
+
+async function promQuery(query) {
+  const url = `${PROM_URL}/api/v1/query?query=${encodeURIComponent(query)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const json = await resp.json();
+  if (json.status !== 'success') throw new Error(json.error || 'query failed');
+  return json.data.result;
+}
+
+async function promRangeQuery(query) {
+  const sel = document.getElementById('time-range').value;
+  const end = Math.floor(Date.now() / 1000);
+  const start = end - RANGE_SECONDS[sel];
+  const step = STEP_MAP[sel];
+  const url = `${PROM_URL}/api/v1/query_range?query=${encodeURIComponent(query)}&start=${start}&end=${end}&step=${step}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const json = await resp.json();
+  if (json.status !== 'success') throw new Error(json.error || 'range query failed');
+  return json.data.result || [];
+}
+
+function getVal(result) {
+  if (!result || result.length === 0) return 0;
+  return result.reduce((sum, r) => sum + parseFloat(r.value[1] || 0), 0);
+}
+
+function fmtNum(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return Math.round(n).toLocaleString();
+}
+
+function fmtCost(n) {
+  if (n >= 1) return '$' + n.toFixed(2);
+  if (n >= 0.01) return '$' + n.toFixed(3);
+  return '$' + n.toFixed(4);
+}
+
+function fmtDuration(secs) {
+  if (secs >= 3600) return (secs / 3600).toFixed(1) + 'h';
+  if (secs >= 60) return (secs / 60).toFixed(1) + 'm';
+  return Math.round(secs) + 's';
+}
+
+function showError(msg) {
+  const banner = document.getElementById('error-banner');
+  banner.textContent = msg;
+  banner.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('error-banner').style.display = 'none';
+}
+
+// Charts - created once, updated on each refresh
+let tokensChart, costDonut, tokenPie, costPer1k, activityChart, tokensTimeChart, costTimeChart;
+
+function initCharts() {
+  tokensChart = new Chart(document.getElementById('tokens-chart'), {
+    type: 'bar',
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: v => fmtNum(v) } },
+      },
+      plugins: {
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtNum(ctx.raw)}` } },
+        legend: { position: 'bottom', labels: { boxWidth: 12 } },
+      },
+    },
+  });
+
+  costDonut = new Chart(document.getElementById('cost-donut'), {
+    type: 'doughnut',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: MODEL_COLORS }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '55%',
+      plugins: {
+        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${fmtCost(ctx.raw)}` } },
+        legend: { position: 'bottom', labels: { boxWidth: 12 } },
+      },
+    },
+  });
+
+  tokenPie = new Chart(document.getElementById('token-pie'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Input', 'Output', 'Cache Read', 'Cache Creation'],
+      datasets: [{ data: [0,0,0,0], backgroundColor: [COLORS.input, COLORS.output, COLORS.cacheRead, COLORS.cacheCreation] }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '40%',
+      plugins: {
+        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${fmtNum(ctx.raw)}` } },
+        legend: { position: 'bottom', labels: { boxWidth: 12 } },
+      },
+    },
+  });
+
+  costPer1k = new Chart(document.getElementById('cost-per-1k'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: '$/1K tokens', data: [], backgroundColor: MODEL_COLORS }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        tooltip: { callbacks: { label: ctx => `${fmtCost(ctx.raw)} / 1K tokens` } },
+        legend: { display: false },
+      },
+      scales: { y: { ticks: { callback: v => '$' + v.toFixed(4) } } },
+    },
+  });
+
+  activityChart = new Chart(document.getElementById('activity-chart'), {
+    type: 'bar',
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: v => fmtDuration(v) } },
+      },
+      plugins: {
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtDuration(ctx.raw)}` } },
+        legend: { position: 'bottom', labels: { boxWidth: 12 } },
+      },
+    },
+  });
+
+  const timeScaleOpts = {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { type: 'time', time: { tooltipFormat: 'MMM d, HH:mm' }, ticks: { maxTicksLimit: 10 } },
+    },
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12 } },
+    },
+    elements: { point: { radius: 0 }, line: { tension: 0.3, borderWidth: 2 } },
+  };
+  tokensTimeChart = new Chart(document.getElementById('tokens-time-chart'), {
+    type: 'line',
+    data: { datasets: [] },
+    options: {
+      ...timeScaleOpts,
+      scales: {
+        ...timeScaleOpts.scales,
+        y: { ticks: { callback: v => fmtNum(v) } },
+      },
+      plugins: {
+        ...timeScaleOpts.plugins,
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtNum(ctx.raw.y)}` } },
+      },
+    },
+  });
+  costTimeChart = new Chart(document.getElementById('cost-time-chart'), {
+    type: 'line',
+    data: { datasets: [] },
+    options: {
+      ...timeScaleOpts,
+      scales: {
+        ...timeScaleOpts.scales,
+        y: { ticks: { callback: v => fmtCost(v) } },
+      },
+      plugins: {
+        ...timeScaleOpts.plugins,
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtCost(ctx.raw.y)}` } },
+      },
+    },
+  });
+}
+
+async function refresh() {
+  try {
+    const RANGE = document.getElementById('time-range').value;
+    const [tokens, costs, activeTime, sessions] = await Promise.all([
+      promQuery(`max_over_time(claude_code_token_usage_tokens_total[${RANGE}])`),
+      promQuery(`max_over_time(claude_code_cost_usage_USD_total[${RANGE}])`),
+      promQuery(`max_over_time(claude_code_active_time_total_seconds_total[${RANGE}])`),
+      promQuery(`max_over_time(claude_code_session_count_total[${RANGE}])`),
+    ]);
+    hideError();
+
+    // --- Time series charts ---
+    const [tokensRange, costRange] = await Promise.all([
+      promRangeQuery('sum by (type)(claude_code_token_usage_tokens_total)'),
+      promRangeQuery('sum by (model)(claude_code_cost_usage_USD_total)'),
+    ]);
+    const tokenTypeLabels = { input: 'Input', output: 'Output', cacheRead: 'Cache Read', cacheCreation: 'Cache Creation' };
+    tokensTimeChart.data.datasets = tokensRange.map(series => {
+      const type = series.metric.type || 'unknown';
+      return {
+        label: tokenTypeLabels[type] || type,
+        borderColor: COLORS[type] || '#8b949e',
+        backgroundColor: (COLORS[type] || '#8b949e') + '20',
+        fill: true,
+        data: series.values.map(([ts, val]) => ({ x: ts * 1000, y: parseFloat(val) })),
+      };
+    });
+    tokensTimeChart.update();
+    costTimeChart.data.datasets = costRange.map((series, i) => ({
+      label: series.metric.model || 'unknown',
+      borderColor: MODEL_COLORS[i % MODEL_COLORS.length],
+      backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] + '20',
+      fill: true,
+      data: series.values.map(([ts, val]) => ({ x: ts * 1000, y: parseFloat(val) })),
+    }));
+    costTimeChart.update();
+
+    // --- Summary cards ---
+    const totalTokens = getVal(tokens);
+    const totalCost = getVal(costs);
+    const totalActive = getVal(activeTime);
+    const totalSessions = getVal(sessions);
+
+    document.getElementById('total-tokens').textContent = fmtNum(totalTokens);
+    document.getElementById('total-cost').textContent = fmtCost(totalCost);
+    document.getElementById('active-time').textContent = fmtDuration(totalActive);
+    document.getElementById('session-count').textContent = Math.round(totalSessions).toLocaleString();
+
+    // --- Parse tokens by model and type ---
+    const modelTokens = {}; // model -> { input, output, cacheRead, cacheCreation }
+    for (const r of tokens) {
+      const model = r.metric.model || 'unknown';
+      const type = r.metric.type || 'unknown';
+      if (!modelTokens[model]) modelTokens[model] = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
+      const val = parseFloat(r.value[1]);
+      if (type === 'input') modelTokens[model].input += val;
+      else if (type === 'output') modelTokens[model].output += val;
+      else if (type === 'cacheRead') modelTokens[model].cacheRead += val;
+      else if (type === 'cacheCreation') modelTokens[model].cacheCreation += val;
+    }
+    const models = Object.keys(modelTokens).sort();
+
+    // Stacked bar: tokens by model
+    tokensChart.data.labels = models;
+    tokensChart.data.datasets = [
+      { label: 'Input', data: models.map(m => modelTokens[m].input), backgroundColor: COLORS.input },
+      { label: 'Output', data: models.map(m => modelTokens[m].output), backgroundColor: COLORS.output },
+      { label: 'Cache Read', data: models.map(m => modelTokens[m].cacheRead), backgroundColor: COLORS.cacheRead },
+      { label: 'Cache Creation', data: models.map(m => modelTokens[m].cacheCreation), backgroundColor: COLORS.cacheCreation },
+    ];
+    tokensChart.update();
+
+    // Token detail table
+    const tbody = document.querySelector('#token-table tbody');
+    tbody.innerHTML = '';
+    let totInput = 0, totOutput = 0, totCacheR = 0, totCacheC = 0;
+    for (const m of models) {
+      const d = modelTokens[m];
+      totInput += d.input; totOutput += d.output; totCacheR += d.cacheRead; totCacheC += d.cacheCreation;
+      const total = d.input + d.output + d.cacheRead + d.cacheCreation;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${m}</td><td class="num">${fmtNum(d.input)}</td><td class="num">${fmtNum(d.output)}</td><td class="num">${fmtNum(d.cacheRead)}</td><td class="num">${fmtNum(d.cacheCreation)}</td><td class="num">${fmtNum(total)}</td>`;
+      tbody.appendChild(tr);
+    }
+    if (models.length > 1) {
+      const tr = document.createElement('tr');
+      tr.style.fontWeight = '600';
+      const grandTotal = totInput + totOutput + totCacheR + totCacheC;
+      tr.innerHTML = `<td>Total</td><td class="num">${fmtNum(totInput)}</td><td class="num">${fmtNum(totOutput)}</td><td class="num">${fmtNum(totCacheR)}</td><td class="num">${fmtNum(totCacheC)}</td><td class="num">${fmtNum(grandTotal)}</td>`;
+      tbody.appendChild(tr);
+    }
+
+    // Sub info for cards
+    document.getElementById('total-tokens-sub').textContent = `${fmtNum(totInput)} in / ${fmtNum(totOutput)} out`;
+    const costModels = {};
+    for (const r of costs) {
+      const model = r.metric.model || 'unknown';
+      costModels[model] = (costModels[model] || 0) + parseFloat(r.value[1]);
+    }
+    const topCostModel = Object.entries(costModels).sort((a,b) => b[1]-a[1])[0];
+    if (topCostModel) {
+      document.getElementById('total-cost-sub').textContent = `highest: ${topCostModel[0]} (${fmtCost(topCostModel[1])})`;
+    }
+    document.getElementById('active-time-sub').textContent = totalSessions > 0 ? `avg ${fmtDuration(totalActive / totalSessions)} / session` : '';
+
+    // Cost donut
+    const costModelsArr = Object.keys(costModels).sort();
+    costDonut.data.labels = costModelsArr;
+    costDonut.data.datasets[0].data = costModelsArr.map(m => costModels[m]);
+    costDonut.data.datasets[0].backgroundColor = costModelsArr.map((_, i) => MODEL_COLORS[i % MODEL_COLORS.length]);
+    costDonut.update();
+
+    // Token type pie
+    tokenPie.data.datasets[0].data = [totInput, totOutput, totCacheR, totCacheC];
+    tokenPie.update();
+
+    // Cache efficiency
+    const cacheTotal = totCacheR + totInput;
+    const cachePct = cacheTotal > 0 ? (totCacheR / cacheTotal * 100) : 0;
+    const cachePctEl = document.getElementById('cache-pct');
+    cachePctEl.textContent = cachePct.toFixed(1) + '%';
+    cachePctEl.style.color = cachePct > 60 ? 'var(--green)' : cachePct > 30 ? 'var(--orange)' : 'var(--red)';
+
+    // Cost per 1K tokens
+    const costPer1kModels = models.filter(m => costModels[m]);
+    const costPer1kData = costPer1kModels.map(m => {
+      const t = modelTokens[m];
+      const total = t.input + t.output + t.cacheRead + t.cacheCreation;
+      return total > 0 ? (costModels[m] / total) * 1000 : 0;
+    });
+    costPer1k.data.labels = costPer1kModels;
+    costPer1k.data.datasets[0].data = costPer1kData;
+    costPer1k.data.datasets[0].backgroundColor = costPer1kModels.map((_, i) => MODEL_COLORS[i % MODEL_COLORS.length]);
+    costPer1k.update();
+
+    // Activity chart by session
+    const sessionMap = {}; // session_id -> { type -> seconds }
+    for (const r of activeTime) {
+      const sid = r.metric.session_id || r.metric.sessionId || 'unknown';
+      const type = r.metric.type || 'active';
+      if (!sessionMap[sid]) sessionMap[sid] = {};
+      sessionMap[sid][type] = (sessionMap[sid][type] || 0) + parseFloat(r.value[1]);
+    }
+    const sessionIds = Object.keys(sessionMap).sort();
+    const actTypes = [...new Set(activeTime.map(r => r.metric.type || 'active'))].sort();
+    const actTypeColors = ['#58a6ff', '#3fb950', '#d29922', '#bc8cff'];
+    const shortIds = sessionIds.map(id => id.length > 12 ? id.slice(0, 6) + '..' + id.slice(-4) : id);
+    activityChart.data.labels = shortIds;
+    activityChart.data.datasets = actTypes.map((type, i) => ({
+      label: type,
+      data: sessionIds.map(sid => sessionMap[sid][type] || 0),
+      backgroundColor: actTypeColors[i % actTypeColors.length],
+    }));
+    activityChart.update();
+
+    document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch (err) {
+    showError(`Failed to fetch metrics: ${err.message}. Is lil-olt-metrics running at ${PROM_URL}?`);
+  }
+}
+
+// Auto-refresh toggle
+document.getElementById('auto-refresh').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    refreshTimer = setInterval(refresh, REFRESH_INTERVAL);
+  } else {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+});
+
+document.getElementById('time-range').addEventListener('change', refresh);
+initCharts();
+refresh();
+refreshTimer = setInterval(refresh, REFRESH_INTERVAL);
+</script>
+</body>
+</html>
