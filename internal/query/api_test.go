@@ -230,3 +230,25 @@ func TestRangeQueryMissingParams(t *testing.T) {
 	resp := parseResponse(t, rr)
 	assert.Equal(t, "error", resp.Status)
 }
+
+func TestCORSHeaders(t *testing.T) {
+	t.Parallel()
+	api, _ := newTestAPI(t)
+	handler := api.Handler()
+	rr := doGet(handler, "/api/v1/labels")
+	assert.Equal(t, "*", rr.Header().Get("Access-Control-Allow-Origin"))
+	assert.Equal(t, "GET, POST, OPTIONS", rr.Header().Get("Access-Control-Allow-Methods"))
+	assert.Equal(t, "Content-Type", rr.Header().Get("Access-Control-Allow-Headers"))
+}
+
+func TestCORSPreflight(t *testing.T) {
+	t.Parallel()
+	api, _ := newTestAPI(t)
+	handler := api.Handler()
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodOptions, "/api/v1/query", nil)
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+	assert.Equal(t, "*", rr.Header().Get("Access-Control-Allow-Origin"))
+	assert.Empty(t, rr.Body.String())
+}
