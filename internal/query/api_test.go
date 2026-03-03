@@ -252,3 +252,13 @@ func TestCORSPreflight(t *testing.T) {
 	assert.Equal(t, "*", rr.Header().Get("Access-Control-Allow-Origin"))
 	assert.Empty(t, rr.Body.String())
 }
+
+func TestDashboard(t *testing.T) {
+	t.Parallel()
+	api, _ := newTestAPI(t)
+	handler := api.Handler()
+	rr := doGet(handler, "/dashboard")
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, "text/html; charset=utf-8", rr.Header().Get("Content-Type"))
+	assert.Contains(t, rr.Body.String(), "Claude Code Metrics")
+}

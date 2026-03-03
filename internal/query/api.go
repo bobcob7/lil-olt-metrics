@@ -1,6 +1,7 @@
 package query
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -17,6 +18,9 @@ import (
 	"github.com/prometheus/prometheus/promql/parser"
 	"github.com/prometheus/prometheus/storage"
 )
+
+//go:embed dashboard.html
+var dashboardHTML []byte
 
 // BuildInfo holds version and build metadata returned by /api/v1/status/buildinfo.
 type BuildInfo struct {
@@ -55,6 +59,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("/api/v1/label/", a.labelValues)
 	mux.HandleFunc("/api/v1/metadata", a.metadata)
 	mux.HandleFunc("/api/v1/status/buildinfo", a.statusBuildInfo)
+	mux.HandleFunc("/dashboard", serveDashboard)
 	return loggingMiddleware(a.logger, corsMiddleware(mux))
 }
 
@@ -307,6 +312,11 @@ func (a *API) statusBuildInfo(w http.ResponseWriter, _ *http.Request) {
 		"buildDate": time.Now().UTC().Format(time.RFC3339),
 		"goVersion": runtime.Version(),
 	})
+}
+
+func serveDashboard(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(dashboardHTML)
 }
 
 type apiResponse struct {

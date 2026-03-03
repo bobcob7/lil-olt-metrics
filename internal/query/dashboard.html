@@ -308,7 +308,7 @@
 </details>
 
 <script>
-const PROM_URL = 'http://localhost:9090';
+const PROM_URL = '';
 const REFRESH_INTERVAL = 30000;
 let refreshTimer = null;
 
@@ -669,7 +669,7 @@ async function refresh() {
 
     document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
   } catch (err) {
-    showError(`Failed to fetch metrics: ${err.message}. Is lil-olt-metrics running at ${PROM_URL}?`);
+    showError(`Failed to fetch metrics: ${err.message}. Is lil-olt-metrics running?`);
   }
 }
 
