@@ -59,7 +59,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("/api/v1/label/", a.labelValues)
 	mux.HandleFunc("/api/v1/metadata", a.metadata)
 	mux.HandleFunc("/api/v1/status/buildinfo", a.statusBuildInfo)
-	mux.HandleFunc("/dashboard", serveDashboard)
+	mux.HandleFunc("/dashboard", a.dashboard)
 	return loggingMiddleware(a.logger, corsMiddleware(mux))
 }
 
@@ -314,9 +314,12 @@ func (a *API) statusBuildInfo(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func serveDashboard(w http.ResponseWriter, _ *http.Request) {
+func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(dashboardHTML)
+	if _, err := w.Write(dashboardHTML); err != nil {
+		a.logger.ErrorContext(r.Context(), "writing dashboard response", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
 }
 
 type apiResponse struct {
