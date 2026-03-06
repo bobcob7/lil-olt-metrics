@@ -316,7 +316,7 @@ func (a *API) statusBuildInfo(w http.ResponseWriter, _ *http.Request) {
 
 func serveDashboard(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(dashboardHTML)
+	_, _ = w.Write(dashboardHTML)
 }
 
 type apiResponse struct {
