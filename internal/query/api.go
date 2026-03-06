@@ -378,6 +378,9 @@ func parseStep(s string) (time.Duration, error) {
 	if err == nil {
 		return d, nil
 	}
+	if d, ok := parsePromDuration(s); ok {
+		return d, nil
+	}
 	f, ferr := strconv.ParseFloat(s, 64)
 	if ferr != nil {
 		return 0, fmt.Errorf("cannot parse %q as duration or seconds", s)
@@ -386,6 +389,23 @@ func parseStep(s string) (time.Duration, error) {
 		return 0, fmt.Errorf("zero or negative step not allowed")
 	}
 	return time.Duration(f * float64(time.Second)), nil
+}
+
+func parsePromDuration(s string) (time.Duration, bool) {
+	suffixes := map[string]time.Duration{
+		"d": 24 * time.Hour,
+		"w": 7 * 24 * time.Hour,
+		"y": 365 * 24 * time.Hour,
+	}
+	for suffix, mult := range suffixes {
+		if strings.HasSuffix(s, suffix) {
+			v, err := strconv.ParseFloat(strings.TrimSuffix(s, suffix), 64)
+			if err == nil && v > 0 {
+				return time.Duration(v * float64(mult)), true
+			}
+		}
+	}
+	return 0, false
 }
 
 func errorTypeFromErr(err error) string {

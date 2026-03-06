@@ -262,3 +262,15 @@ func TestDashboard(t *testing.T) {
 	assert.Equal(t, "text/html; charset=utf-8", rr.Header().Get("Content-Type"))
 	assert.Contains(t, rr.Body.String(), "Claude Code Metrics")
 }
+
+func TestRangeQueryDayStep(t *testing.T) {
+	t.Parallel()
+	api, _ := newTestAPI(t)
+	handler := api.Handler()
+	startSec := strconv.FormatFloat(float64(1000000)/1000.0, 'f', 3, 64)
+	endSec := strconv.FormatFloat(float64(1000000+9*15000)/1000.0, 'f', 3, 64)
+	rr := doGet(handler, "/api/v1/query_range?query=up&start="+startSec+"&end="+endSec+"&step=1d")
+	assert.Equal(t, http.StatusOK, rr.Code)
+	resp := parseResponse(t, rr)
+	assert.Equal(t, "success", resp.Status)
+}

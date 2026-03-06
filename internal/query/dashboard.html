@@ -74,7 +74,7 @@
   }
   .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 1rem;
     margin-bottom: 1.5rem;
   }
@@ -235,6 +235,19 @@
     <div class="card-label">Sessions</div>
     <div class="card-value" id="session-count">--</div>
   </div>
+  <div class="card">
+    <div class="card-label">Commits</div>
+    <div class="card-value" id="commit-count">--</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Pull Requests</div>
+    <div class="card-value" id="pr-count">--</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Lines Changed</div>
+    <div class="card-value" id="loc-count">--</div>
+    <div class="card-sub" id="loc-sub"></div>
+  </div>
 </div>
 
 <div class="grid">
@@ -249,6 +262,33 @@
 </div>
 
 <details open>
+  <summary>Code Activity</summary>
+  <div class="grid">
+    <div class="panel">
+      <h2>Languages Edited</h2>
+      <div class="chart-container tall"><canvas id="lang-chart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Edit Tool Usage</h2>
+      <div class="chart-container"><canvas id="tool-donut"></canvas></div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <h2>Edit Acceptance Rate</h2>
+      <div class="gauge-wrap">
+        <div class="gauge-value" id="accept-pct">--</div>
+        <div class="gauge-label">accepted / (accepted + rejected)</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Lines of Code Over Time</h2>
+      <div class="chart-container"><canvas id="loc-time-chart"></canvas></div>
+    </div>
+  </div>
+</details>
+
+<details>
   <summary>Token Breakdown</summary>
   <div class="grid">
     <div class="panel">
@@ -319,6 +359,7 @@ const COLORS = {
   cacheCreation: '#bc8cff',
 };
 const MODEL_COLORS = ['#58a6ff','#3fb950','#d29922','#bc8cff','#f778ba','#f85149','#79c0ff','#7ee787'];
+const LANG_COLORS = ['#58a6ff','#3fb950','#d29922','#bc8cff','#f778ba','#f85149','#79c0ff','#7ee787','#a5d6ff','#56d364'];
 
 Chart.defaults.color = '#8b949e';
 Chart.defaults.borderColor = '#30363d';
@@ -327,7 +368,7 @@ Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Hel
 const STEP_MAP = {
   '1m': '5s', '5m': '15s', '30m': '30s', '1h': '1m', '4h': '5m',
   '8h': '10m', '24h': '30m', '2d': '1h', '7d': '4h', '14d': '8h',
-  '30d': '12h', '90d': '1d',
+  '30d': '12h', '90d': '24h',
 };
 const RANGE_SECONDS = {
   '1m': 60, '5m': 300, '30m': 1800, '1h': 3600, '4h': 14400,
@@ -394,6 +435,7 @@ function hideError() {
 
 // Charts - created once, updated on each refresh
 let tokensChart, costDonut, tokenPie, costPer1k, activityChart, tokensTimeChart, costTimeChart;
+let langChart, toolDonut, locTimeChart;
 
 function initCharts() {
   tokensChart = new Chart(document.getElementById('tokens-chart'), {
@@ -510,23 +552,72 @@ function initCharts() {
       },
     },
   });
+
+  // --- Code Activity charts ---
+  langChart = new Chart(document.getElementById('lang-chart'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Edits', data: [], backgroundColor: LANG_COLORS }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        tooltip: { callbacks: { label: ctx => `${ctx.raw} edits` } },
+        legend: { display: false },
+      },
+      scales: { x: { ticks: { callback: v => fmtNum(v) } } },
+    },
+  });
+
+  toolDonut = new Chart(document.getElementById('tool-donut'), {
+    type: 'doughnut',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#58a6ff', '#3fb950', '#d29922', '#bc8cff'] }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '55%',
+      plugins: {
+        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${fmtNum(ctx.raw)} edits` } },
+        legend: { position: 'bottom', labels: { boxWidth: 12 } },
+      },
+    },
+  });
+
+  locTimeChart = new Chart(document.getElementById('loc-time-chart'), {
+    type: 'line',
+    data: { datasets: [] },
+    options: {
+      ...timeScaleOpts,
+      scales: {
+        ...timeScaleOpts.scales,
+        y: { ticks: { callback: v => fmtNum(v) } },
+      },
+      plugins: {
+        ...timeScaleOpts.plugins,
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtNum(ctx.raw.y)}` } },
+      },
+    },
+  });
 }
 
 async function refresh() {
   try {
     const RANGE = document.getElementById('time-range').value;
-    const [tokens, costs, activeTime, sessions] = await Promise.all([
+    const [tokens, costs, activeTime, sessions, commits, prs, loc, editDecisions] = await Promise.all([
       promQuery(`max_over_time(claude_code_token_usage_tokens_total[${RANGE}])`),
       promQuery(`max_over_time(claude_code_cost_usage_USD_total[${RANGE}])`),
       promQuery(`max_over_time(claude_code_active_time_total_seconds_total[${RANGE}])`),
       promQuery(`max_over_time(claude_code_session_count_total[${RANGE}])`),
+      promQuery(`max_over_time(claude_code_commit_count_total[${RANGE}])`),
+      promQuery(`max_over_time(claude_code_pull_request_count_total[${RANGE}])`),
+      promQuery(`max_over_time(claude_code_lines_of_code_count_total[${RANGE}])`),
+      promQuery(`max_over_time(claude_code_code_edit_tool_decision_total[${RANGE}])`),
     ]);
     hideError();
 
     // --- Time series charts ---
-    const [tokensRange, costRange] = await Promise.all([
+    const [tokensRange, costRange, locRange] = await Promise.all([
       promRangeQuery('sum by (type)(increase(claude_code_token_usage_tokens_total[{step}]))'),
       promRangeQuery('sum by (model)(increase(claude_code_cost_usage_USD_total[{step}]))'),
+      promRangeQuery('sum by (type)(increase(claude_code_lines_of_code_count_total[{step}]))'),
     ]);
     const tokenTypeLabels = { input: 'Input', output: 'Output', cacheRead: 'Cache Read', cacheCreation: 'Cache Creation' };
     tokensTimeChart.data.datasets = tokensRange.map(series => {
@@ -549,16 +640,80 @@ async function refresh() {
     }));
     costTimeChart.update();
 
+    const locColors = { added: '#3fb950', removed: '#f85149' };
+    locTimeChart.data.datasets = locRange.map(series => {
+      const type = series.metric.type || 'unknown';
+      return {
+        label: type === 'added' ? 'Added' : type === 'removed' ? 'Removed' : type,
+        borderColor: locColors[type] || '#8b949e',
+        backgroundColor: (locColors[type] || '#8b949e') + '20',
+        fill: true,
+        data: series.values.map(([ts, val]) => ({ x: ts * 1000, y: parseFloat(val) })),
+      };
+    });
+    locTimeChart.update();
+
     // --- Summary cards ---
     const totalTokens = getVal(tokens);
     const totalCost = getVal(costs);
     const totalActive = getVal(activeTime);
     const totalSessions = getVal(sessions);
+    const totalCommits = getVal(commits);
+    const totalPRs = getVal(prs);
 
     document.getElementById('total-tokens').textContent = fmtNum(totalTokens);
     document.getElementById('total-cost').textContent = fmtCost(totalCost);
     document.getElementById('active-time').textContent = fmtDuration(totalActive);
     document.getElementById('session-count').textContent = Math.round(totalSessions).toLocaleString();
+    document.getElementById('commit-count').textContent = Math.round(totalCommits).toLocaleString();
+    document.getElementById('pr-count').textContent = Math.round(totalPRs).toLocaleString();
+
+    // Lines of code card
+    let linesAdded = 0, linesRemoved = 0;
+    for (const r of loc) {
+      const type = r.metric.type || 'unknown';
+      const val = parseFloat(r.value[1]);
+      if (type === 'added') linesAdded += val;
+      else if (type === 'removed') linesRemoved += val;
+    }
+    const netLines = linesAdded - linesRemoved;
+    document.getElementById('loc-count').textContent = (netLines >= 0 ? '+' : '') + fmtNum(netLines);
+    document.getElementById('loc-sub').textContent = `+${fmtNum(linesAdded)} / -${fmtNum(linesRemoved)}`;
+
+    // --- Code Activity: edit decisions ---
+    const langCounts = {};
+    const toolCounts = {};
+    let totalAccept = 0, totalReject = 0;
+    for (const r of editDecisions) {
+      const lang = r.metric.language || 'unknown';
+      const tool = r.metric.tool_name || 'unknown';
+      const decision = r.metric.decision || 'unknown';
+      const val = parseFloat(r.value[1]);
+      langCounts[lang] = (langCounts[lang] || 0) + val;
+      toolCounts[tool] = (toolCounts[tool] || 0) + val;
+      if (decision === 'accept') totalAccept += val;
+      else if (decision === 'reject') totalReject += val;
+    }
+
+    // Language chart (sorted descending)
+    const langEntries = Object.entries(langCounts).sort((a, b) => b[1] - a[1]);
+    langChart.data.labels = langEntries.map(e => e[0]);
+    langChart.data.datasets[0].data = langEntries.map(e => e[1]);
+    langChart.data.datasets[0].backgroundColor = langEntries.map((_, i) => LANG_COLORS[i % LANG_COLORS.length]);
+    langChart.update();
+
+    // Tool donut
+    const toolEntries = Object.entries(toolCounts).sort((a, b) => b[1] - a[1]);
+    toolDonut.data.labels = toolEntries.map(e => e[0]);
+    toolDonut.data.datasets[0].data = toolEntries.map(e => e[1]);
+    toolDonut.update();
+
+    // Acceptance rate gauge
+    const acceptTotal = totalAccept + totalReject;
+    const acceptPct = acceptTotal > 0 ? (totalAccept / acceptTotal * 100) : 0;
+    const acceptEl = document.getElementById('accept-pct');
+    acceptEl.textContent = acceptPct.toFixed(1) + '%';
+    acceptEl.style.color = acceptPct > 90 ? 'var(--green)' : acceptPct > 70 ? 'var(--orange)' : 'var(--red)';
 
     // --- Parse tokens by model and type ---
     const modelTokens = {}; // model -> { input, output, cacheRead, cacheCreation }
