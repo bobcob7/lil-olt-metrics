@@ -14,18 +14,14 @@ usage() {
     cat <<EOF
 Usage: $0 [OPTIONS]
 
-Install or update lil-olt-metrics as a systemd service on Linux.
+Build and install lil-olt-metrics as a systemd service on Linux.
+Must be run from the repository root.
 
 Options:
-  --binary PATH   Use a local binary instead of downloading from GitHub
-  --help          Show this help message
+  --help    Show this help message
 
 Examples:
-  # Install latest release
   sudo $0
-
-  # Install from a local binary
-  sudo $0 --binary ./lil-olt-metrics-linux-amd64
 EOF
     exit 0
 }
@@ -39,39 +35,9 @@ die() {
     exit 1
 }
 
-detect_arch() {
-    local arch
-    arch="$(uname -m)"
-    case "$arch" in
-        x86_64)  echo "amd64" ;;
-        aarch64) echo "arm64" ;;
-        *)       die "Unsupported architecture: $arch" ;;
-    esac
-}
-
-download_latest() {
-    local arch="$1"
-    local asset="${BINARY_NAME}-linux-${arch}"
-    local url
-    url="https://github.com/${REPO}/releases/latest/download/${asset}"
-    log "Downloading ${asset} from GitHub..."
-    if command -v curl &>/dev/null; then
-        curl -fSL -o "${INSTALL_DIR}/${BINARY_NAME}" "$url"
-    elif command -v wget &>/dev/null; then
-        wget -qO "${INSTALL_DIR}/${BINARY_NAME}" "$url"
-    else
-        die "Neither curl nor wget found. Install one and retry."
-    fi
-}
-
 # --- Parse arguments ---
-LOCAL_BINARY=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --binary)
-            LOCAL_BINARY="$2"
-            shift 2
-            ;;
         --help)
             usage
             ;;
@@ -88,6 +54,16 @@ fi
 if [[ $EUID -ne 0 ]]; then
     die "This script must be run as root (use sudo)."
 fi
+if [[ ! -f "go.mod" ]]; then
+    die "Must be run from the repository root (go.mod not found)."
+fi
+if ! command -v go &>/dev/null; then
+    die "Go is required but not found. Install Go and retry."
+fi
+
+# --- Build binary ---
+log "Building ${BINARY_NAME}..."
+GOBIN="$(pwd)/bin" go build -o "bin/${BINARY_NAME}" ./cmd/server
 
 # --- Stop existing service if running ---
 if systemctl is-active --quiet "${BINARY_NAME}" 2>/dev/null; then
@@ -96,16 +72,9 @@ if systemctl is-active --quiet "${BINARY_NAME}" 2>/dev/null; then
 fi
 
 # --- Install binary ---
-if [[ -n "$LOCAL_BINARY" ]]; then
-    [[ -f "$LOCAL_BINARY" ]] || die "Binary not found: $LOCAL_BINARY"
-    log "Installing binary from $LOCAL_BINARY..."
-    cp "$LOCAL_BINARY" "${INSTALL_DIR}/${BINARY_NAME}"
-else
-    ARCH="$(detect_arch)"
-    download_latest "$ARCH"
-fi
+log "Installing binary to ${INSTALL_DIR}/${BINARY_NAME}..."
+cp "bin/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
 chmod 755 "${INSTALL_DIR}/${BINARY_NAME}"
-log "Binary installed to ${INSTALL_DIR}/${BINARY_NAME}"
 
 # --- Create system user/group ---
 if ! getent group "$SERVICE_GROUP" &>/dev/null; then

@@ -14,19 +14,21 @@ A minimal, single-process metrics server that ingests [OTLP](https://opentelemet
 
 ## Installation
 
-Install the latest release as a system daemon:
+Build from source and install as a system daemon (requires Go 1.24+):
 
 **Linux (systemd)**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bobcob7/lil-olt-metrics/main/scripts/install-linux.sh | sudo bash
+git clone https://github.com/bobcob7/lil-olt-metrics.git && cd lil-olt-metrics
+sudo scripts/install-linux.sh
 ```
 
 **macOS (launchd)**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bobcob7/lil-olt-metrics/main/scripts/install-darwin.sh | sudo bash
+git clone https://github.com/bobcob7/lil-olt-metrics.git && cd lil-olt-metrics
+sudo scripts/install-darwin.sh
 ```
 
-Both scripts download the latest binary, install it to `/usr/local/bin`, write a default config (preserving any existing config), and register a system service. They are idempotent and safe to re-run for updates. Use `--binary PATH` to install from a local file instead. See the [scripts/](scripts/) directory for details.
+Both scripts build the binary, install it to `/usr/local/bin`, write a default config (preserving any existing config), and register a system service. They are idempotent and safe to re-run for updates. See the [scripts/](scripts/) directory for details.
 
 ## Quick Start
 
