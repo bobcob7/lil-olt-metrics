@@ -12,6 +12,22 @@ A minimal, single-process metrics server that ingests [OTLP](https://opentelemet
 - **Zero-config startup** with sensible defaults - just run the binary
 - **Single binary**, no external dependencies
 
+## Installation
+
+Install the latest release as a system daemon:
+
+**Linux (systemd)**
+```bash
+curl -fsSL https://raw.githubusercontent.com/bobcob7/lil-olt-metrics/main/scripts/install-linux.sh | sudo bash
+```
+
+**macOS (launchd)**
+```bash
+curl -fsSL https://raw.githubusercontent.com/bobcob7/lil-olt-metrics/main/scripts/install-darwin.sh | sudo bash
+```
+
+Both scripts download the latest binary, install it to `/usr/local/bin`, write a default config (preserving any existing config), and register a system service. They are idempotent and safe to re-run for updates. Use `--binary PATH` to install from a local file instead. See the [scripts/](scripts/) directory for details.
+
 ## Quick Start
 
 ### Build and run
