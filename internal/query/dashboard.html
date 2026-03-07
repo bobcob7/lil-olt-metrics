@@ -180,6 +180,102 @@
   details summary:hover {
     color: var(--accent);
   }
+  .heatmap-section { margin-bottom: 0.5rem; }
+  .heatmap-section h3 {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .heatmap-grid {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+  .heatmap-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .heatmap-cell {
+    aspect-ratio: 1;
+    cursor: pointer;
+    position: relative;
+    max-width: 40px;
+    max-height: 40px;
+    outline: 1px solid rgba(255,255,255,0.1);
+  }
+  .heatmap-cell.level-0 { background: #161b22; }
+  .heatmap-cell.level-1 { background: #0e4429; }
+  .heatmap-cell.level-2 { background: #006d32; }
+  .heatmap-cell.level-3 { background: #26a641; }
+  .heatmap-cell.level-4 { background: #3fb950; }
+  .heatmap-row {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+  }
+  .heatmap-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    min-width: 28px;
+    text-align: right;
+    padding-right: 4px;
+  }
+  .heatmap-month-row {
+    display: flex;
+    margin-bottom: 2px;
+  }
+  .heatmap-month-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    flex: 1;
+    min-width: 0;
+  }
+  .heatmap-inline {
+    display: flex;
+    align-items: center;
+  }
+  .heatmap-inline-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .heatmap-inline-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    flex: 1;
+    align-items: center;
+    gap: 2px;
+  }
+  .heatmap-tooltip {
+    position: fixed;
+    background: #1c2128;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--text);
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+    display: none;
+  }
+  .heatmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+  .heatmap-legend .heatmap-cell {
+    width: 10px;
+    height: 10px;
+    cursor: default;
+  }
   @media (max-width: 500px) {
     .grid { grid-template-columns: 1fr; }
     .cards { grid-template-columns: repeat(2, 1fr); }
@@ -250,6 +346,15 @@
   </div>
 </div>
 
+<div id="heatmap-tooltip" class="heatmap-tooltip"></div>
+
+<details open>
+  <summary>Activity Trends</summary>
+  <div class="panel" style="margin-bottom:1rem">
+    <div id="heatmap-container"></div>
+  </div>
+</details>
+
 <div class="grid">
   <div class="panel">
     <h2>Tokens Over Time</h2>
@@ -261,7 +366,7 @@
   </div>
 </div>
 
-<details open>
+<details>
   <summary>Code Activity</summary>
   <div class="grid">
     <div class="panel">
@@ -431,6 +536,287 @@ function showError(msg) {
 
 function hideError() {
   document.getElementById('error-banner').style.display = 'none';
+}
+
+// --- Heatmap rendering ---
+const HEATMAP_LEVELS = ['level-0', 'level-1', 'level-2', 'level-3', 'level-4'];
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function computeLevels(values) {
+  const nonZero = values.filter(v => v > 0).sort((a, b) => a - b);
+  if (nonZero.length === 0) return () => 0;
+  const p25 = nonZero[Math.floor(nonZero.length * 0.25)] || nonZero[0];
+  const p50 = nonZero[Math.floor(nonZero.length * 0.50)] || p25;
+  const p75 = nonZero[Math.floor(nonZero.length * 0.75)] || p50;
+  return (v) => {
+    if (v <= 0) return 0;
+    if (v <= p25) return 1;
+    if (v <= p50) return 2;
+    if (v <= p75) return 3;
+    return 4;
+  };
+}
+
+function setupTooltip(cell, text) {
+  const tip = document.getElementById('heatmap-tooltip');
+  cell.addEventListener('mouseenter', (e) => {
+    tip.textContent = text;
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 12) + 'px';
+    tip.style.top = (e.clientY - 8) + 'px';
+  });
+  cell.addEventListener('mousemove', (e) => {
+    tip.style.left = (e.clientX + 12) + 'px';
+    tip.style.top = (e.clientY - 8) + 'px';
+  });
+  cell.addEventListener('mouseleave', () => {
+    tip.style.display = 'none';
+  });
+}
+
+function createLegend() {
+  const legend = document.createElement('div');
+  legend.className = 'heatmap-legend';
+  legend.innerHTML = 'Less ';
+  for (let i = 0; i <= 4; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell ' + HEATMAP_LEVELS[i];
+    legend.appendChild(cell);
+  }
+  const more = document.createTextNode(' More');
+  legend.appendChild(more);
+  return legend;
+}
+
+function renderCalendarHeatmap(data, rangeSecs) {
+  const section = document.createElement('div');
+  section.className = 'heatmap-section';
+  const h3 = document.createElement('h3');
+  h3.textContent = 'Daily Activity';
+  section.appendChild(h3);
+  const dateMap = {};
+  for (const d of data) dateMap[d.date] = d.value;
+  const getLevel = computeLevels(data.map(d => d.value));
+  const totalDays = Math.ceil(rangeSecs / 86400);
+  const avgDaily = data.reduce((s, d) => s + d.value, 0) / Math.max(totalDays, 1);
+  // Build grid: columns = weeks, rows = 7 days (Mon=0..Sun=6)
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  const start = new Date(end.getTime() - rangeSecs * 1000);
+  start.setHours(0, 0, 0, 0);
+  // Collect all dates
+  const dates = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    dates.push(new Date(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  // Group by weeks (Mon-based)
+  const weeks = [];
+  let currentWeek = [];
+  for (const d of dates) {
+    const dow = (d.getDay() + 6) % 7; // Mon=0..Sun=6
+    if (dow === 0 && currentWeek.length > 0) {
+      weeks.push(currentWeek);
+      currentWeek = [];
+    }
+    currentWeek.push({ date: d, dow });
+  }
+  if (currentWeek.length > 0) weeks.push(currentWeek);
+  // Month labels
+  const monthRow = document.createElement('div');
+  monthRow.className = 'heatmap-month-row';
+  const monthSpacer = document.createElement('span');
+  monthSpacer.style.flex = 'none';
+  monthSpacer.style.width = '30px';
+  monthRow.appendChild(monthSpacer);
+  let lastMonth = -1;
+  for (const week of weeks) {
+    const span = document.createElement('span');
+    span.className = 'heatmap-month-label';
+    const firstDay = week[0].date;
+    if (firstDay.getMonth() !== lastMonth && firstDay.getDate() <= 7) {
+      span.textContent = MONTH_NAMES[firstDay.getMonth()];
+      lastMonth = firstDay.getMonth();
+    }
+    monthRow.appendChild(span);
+  }
+  section.appendChild(monthRow);
+  // Grid: 7 rows × N columns
+  const grid = document.createElement('div');
+  grid.style.display = 'flex';
+  grid.style.gap = '0';
+  // Day labels column
+  const labelCol = document.createElement('div');
+  labelCol.className = 'heatmap-col';
+  labelCol.style.flex = 'none';
+  labelCol.style.width = '28px';
+  labelCol.style.marginRight = '2px';
+  for (let row = 0; row < 7; row++) {
+    const label = document.createElement('div');
+    label.className = 'heatmap-label';
+    label.style.aspectRatio = 'auto';
+    label.style.flex = '1';
+    label.style.display = 'flex';
+    label.style.alignItems = 'center';
+    label.style.justifyContent = 'flex-end';
+    if (row % 2 === 0) label.textContent = DAY_NAMES[row];
+    labelCol.appendChild(label);
+  }
+  grid.appendChild(labelCol);
+  // Week columns
+  for (const week of weeks) {
+    const col = document.createElement('div');
+    col.className = 'heatmap-col';
+    // Fill empty slots at the start of the first week
+    const startDow = week[0].dow;
+    if (weeks.indexOf(week) === 0) {
+      for (let i = 0; i < startDow; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'heatmap-cell level-0';
+        empty.style.visibility = 'hidden';
+        col.appendChild(empty);
+      }
+    }
+    for (const { date } of week) {
+      const key = date.toISOString().slice(0, 10);
+      const val = dateMap[key] || 0;
+      const level = getLevel(val);
+      const cell = document.createElement('div');
+      cell.className = 'heatmap-cell ' + HEATMAP_LEVELS[level];
+      const tipText = `${key}: ${fmtDuration(val)} (avg: ${fmtDuration(avgDaily)}/day)`;
+      setupTooltip(cell, tipText);
+      col.appendChild(cell);
+    }
+    // Fill empty slots at end of last week
+    if (weeks.indexOf(week) === weeks.length - 1) {
+      const endDow = week[week.length - 1].dow;
+      for (let i = endDow + 1; i < 7; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'heatmap-cell level-0';
+        empty.style.visibility = 'hidden';
+        col.appendChild(empty);
+      }
+    }
+    grid.appendChild(col);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderWeekdayHeatmap(data, rangeSecs) {
+  const section = document.createElement('div');
+  section.className = 'heatmap-section';
+  const h3 = document.createElement('h3');
+  h3.textContent = 'Activity by Day of Week';
+  section.appendChild(h3);
+  // Aggregate by day-of-week
+  const dowTotals = [0, 0, 0, 0, 0, 0, 0];
+  const dowCounts = [0, 0, 0, 0, 0, 0, 0];
+  for (const d of data) {
+    const date = new Date(d.date + 'T12:00:00');
+    const dow = (date.getDay() + 6) % 7; // Mon=0
+    dowTotals[dow] += d.value;
+    dowCounts[dow]++;
+  }
+  const getLevel = computeLevels(dowTotals);
+  const row = document.createElement('div');
+  row.className = 'heatmap-inline';
+  for (let i = 0; i < 7; i++) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'heatmap-inline-cell';
+    const label = document.createElement('div');
+    label.className = 'heatmap-inline-label';
+    label.textContent = DAY_NAMES[i];
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell ' + HEATMAP_LEVELS[getLevel(dowTotals[i])];
+    cell.style.width = '100%';
+    cell.style.height = '32px';
+    cell.style.aspectRatio = 'auto';
+    cell.style.maxWidth = 'none';
+    cell.style.maxHeight = 'none';
+    const avg = dowCounts[i] > 0 ? dowTotals[i] / dowCounts[i] : 0;
+    setupTooltip(cell, `${DAY_NAMES[i]}: ${fmtDuration(dowTotals[i])} total (avg: ${fmtDuration(avg)}/day)`);
+    wrapper.appendChild(label);
+    wrapper.appendChild(cell);
+    row.appendChild(wrapper);
+  }
+  section.appendChild(row);
+  return section;
+}
+
+function renderHourlyHeatmap(data) {
+  const section = document.createElement('div');
+  section.className = 'heatmap-section';
+  const h3 = document.createElement('h3');
+  h3.textContent = 'Activity by Hour';
+  section.appendChild(h3);
+  // Aggregate by hour
+  const hourTotals = new Array(24).fill(0);
+  const hourCounts = new Array(24).fill(0);
+  for (const d of data) {
+    hourTotals[d.hour] += d.value;
+    hourCounts[d.hour]++;
+  }
+  const getLevel = computeLevels(hourTotals);
+  const row = document.createElement('div');
+  row.className = 'heatmap-inline';
+  for (let h = 0; h < 24; h++) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'heatmap-inline-cell';
+    const label = document.createElement('div');
+    label.className = 'heatmap-inline-label';
+    label.textContent = String(h).padStart(2, '0');
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell ' + HEATMAP_LEVELS[getLevel(hourTotals[h])];
+    cell.style.width = '100%';
+    cell.style.height = '24px';
+    cell.style.aspectRatio = 'auto';
+    cell.style.maxWidth = 'none';
+    cell.style.maxHeight = 'none';
+    const avg = hourCounts[h] > 0 ? hourTotals[h] / hourCounts[h] : 0;
+    setupTooltip(cell, `${String(h).padStart(2, '0')}:00: ${fmtDuration(hourTotals[h])} total (avg: ${fmtDuration(avg)}/occurrence)`);
+    wrapper.appendChild(label);
+    wrapper.appendChild(cell);
+    row.appendChild(wrapper);
+  }
+  section.appendChild(row);
+  return section;
+}
+
+async function refreshHeatmap() {
+  const container = document.getElementById('heatmap-container');
+  container.innerHTML = '';
+  const YEAR_SECS = 365 * 86400;
+  const end = Math.floor(Date.now() / 1000);
+  const start = end - YEAR_SECS;
+  // Fetch daily and hourly data for the full year
+  const [dailyResp, hourlyResp] = await Promise.all([
+    fetch(`${PROM_URL}/api/v1/query_range?query=${encodeURIComponent('sum(increase(claude_code_active_time_total_seconds_total[1d]))')}&start=${start}&end=${end}&step=86400`),
+    fetch(`${PROM_URL}/api/v1/query_range?query=${encodeURIComponent('sum(increase(claude_code_active_time_total_seconds_total[1h]))')}&start=${start}&end=${end}&step=3600`),
+  ]);
+  if (!dailyResp.ok || !hourlyResp.ok) return;
+  const [dailyJson, hourlyJson] = await Promise.all([dailyResp.json(), hourlyResp.json()]);
+  if (dailyJson.status !== 'success' || hourlyJson.status !== 'success') return;
+  const dailyData = [];
+  for (const series of (dailyJson.data.result || [])) {
+    for (const [ts, val] of series.values) {
+      const d = new Date(ts * 1000);
+      dailyData.push({ date: d.toISOString().slice(0, 10), value: parseFloat(val) || 0 });
+    }
+  }
+  const hourlyData = [];
+  for (const series of (hourlyJson.data.result || [])) {
+    for (const [ts, val] of series.values) {
+      const d = new Date(ts * 1000);
+      hourlyData.push({ hour: d.getHours(), value: parseFloat(val) || 0 });
+    }
+  }
+  container.appendChild(renderCalendarHeatmap(dailyData, YEAR_SECS));
+  container.appendChild(renderWeekdayHeatmap(dailyData, YEAR_SECS));
+  container.appendChild(renderHourlyHeatmap(hourlyData));
+  container.appendChild(createLegend());
 }
 
 // Charts - created once, updated on each refresh
@@ -821,6 +1207,8 @@ async function refresh() {
       backgroundColor: actTypeColors[i % actTypeColors.length],
     }));
     activityChart.update();
+
+    await refreshHeatmap();
 
     document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
   } catch (err) {
