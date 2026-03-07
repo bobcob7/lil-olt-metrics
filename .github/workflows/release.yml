@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
 
 permissions:
   contents: write
@@ -51,6 +51,8 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+      - name: Copy install script
+        run: cp scripts/install.sh artifacts/install.sh
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:

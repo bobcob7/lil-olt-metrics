@@ -1,44 +1,40 @@
 {
   "repo": "bobcob7/lil-olt-metrics",
   "directory": "scripts",
-  "git_ref": "ec64221",
-  "updated_at": "2026-03-07T06:31:55Z",
+  "git_ref": "57b40d8",
+  "updated_at": "2026-03-07T06:41:23Z",
   "sections": {
-    "description": "Platform-specific installation scripts that build the Go binary and register it as a system daemon on macOS (launchd) and Linux (systemd).",
-    "purpose": "Provides one-command installation for lil-olt-metrics on macOS and Linux. Each script builds the binary from source, installs it to /usr/local/bin, writes a default config if absent, and registers the service with the platform's init system so it starts automatically on boot.",
+    "description": "Installation scripts for lil-olt-metrics. Includes a universal install script that downloads pre-built binaries from GitHub releases, plus legacy platform-specific scripts that build from source.",
+    "purpose": "Provide one-command installation for lil-olt-metrics. The primary install.sh downloads pre-built binaries from GH releases, auto-detects OS/arch, and sets up the system service. The legacy install-linux.sh and install-darwin.sh build from source and require Go.",
     "strengths": [
-      "Both scripts use `set -euo pipefail` for strict error handling",
-      "Preflight checks validate OS, root privileges, repository root, and Go availability before proceeding",
-      "Idempotent: existing daemons are stopped/unloaded before reinstalling, and existing configs are preserved",
-      "Linux script creates a dedicated system user/group (`lom`) and applies systemd hardening (NoNewPrivileges, ProtectSystem, ProtectHome, PrivateTmp)",
-      "Consistent structure and logging between both scripts makes them easy to compare and maintain",
-      "Usage/help flag supported in both scripts"
+      "install.sh requires no Go toolchain \u2014 downloads pre-built binaries",
+      "Auto-detects OS and architecture for a single curl | bash command",
+      "Supports pinning to a specific version via --version or LOM_VERSION env var",
+      "All scripts use set -euo pipefail for strict error handling",
+      "Idempotent: existing services are stopped before reinstalling, configs are preserved",
+      "Linux systemd unit includes hardening directives (NoNewPrivileges, ProtectSystem, ProtectHome, PrivateTmp)"
     ],
     "weaknesses": [
-      "No uninstall/remove mode \u2014 users must manually reverse the installation steps",
-      "No version flag or version tracking in the installed binary path",
-      "Darwin script does not create a dedicated user \u2014 the daemon runs as root via launchd",
-      "No rollback on partial failure (e.g., binary installed but service registration fails)",
-      "Config path is hardcoded; no flag to override install locations",
-      "No checksum or signature verification of the built binary"
+      "No uninstall/remove mode",
+      "Darwin launchd daemon runs as root (no dedicated user)",
+      "No rollback on partial failure",
+      "No checksum or signature verification of downloaded binaries",
+      "Install paths are hardcoded"
     ],
-    "test_coverage": "No tests. These are operational scripts without automated test coverage.",
-    "dependencies": [
-      "Go toolchain (required to build the binary from source)",
-      "macOS launchd (install-darwin.sh)",
-      "Linux systemd (install-linux.sh)",
-      "Root/sudo privileges on the target system",
-      "Repository source tree with go.mod at the root and cmd/server as the build entry point"
-    ],
+    "test_coverage": "No tests. Operational scripts without automated test coverage.",
+    "dependencies": "install.sh: curl, root/sudo privileges. install-linux.sh/install-darwin.sh: Go toolchain, root/sudo, repository source tree.",
     "functionality": [
-      "Build the lil-olt-metrics binary from `./cmd/server` using `go build`",
-      "Install the binary to `/usr/local/bin`",
-      "Create data and config directories with appropriate ownership",
-      "Write a default `config.yaml` if one does not already exist",
-      "macOS: generate and load a launchd plist at `/Library/LaunchDaemons/com.bobcob7.lil-olt-metrics.plist` with KeepAlive and RunAtLoad",
-      "Linux: create a dedicated `lom` system user/group, generate a hardened systemd unit, enable and start the service",
-      "Gracefully stop/unload any previously installed instance before reinstalling"
+      "install.sh: Download pre-built binary from GitHub releases for the detected OS/arch",
+      "install.sh: Auto-detect platform (linux/darwin) and architecture (amd64/arm64)",
+      "install.sh: Resolve latest version via GitHub API, or accept --version flag",
+      "install.sh: Install binary to /usr/local/bin",
+      "install.sh: Set up systemd service (Linux) or launchd daemon (macOS)",
+      "install.sh: Write default config.yaml if not present, preserving existing configs",
+      "install.sh: --no-service flag to skip service registration (binary-only install)",
+      "install.sh: Stop/unload existing service before reinstalling",
+      "install-linux.sh: Build from source and install as systemd service (legacy)",
+      "install-darwin.sh: Build from source and install as launchd daemon (legacy)"
     ],
-    "files": "| File | Description |\n|---|---|\n| install-darwin.sh | Builds and installs lil-olt-metrics as a macOS launchd daemon under /Library/LaunchDaemons |\n| install-linux.sh | Builds and installs lil-olt-metrics as a Linux systemd service with a dedicated system user and hardened unit file |"
+    "files": "| File | Description |\n|---|---|\n| install.sh | Universal install script \u2014 downloads pre-built binary from GH releases, detects OS/arch, sets up system service |\n| install-linux.sh | Legacy script \u2014 builds from source and installs as Linux systemd service |\n| install-darwin.sh | Legacy script \u2014 builds from source and installs as macOS launchd daemon |"
   }
 }

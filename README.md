@@ -14,21 +14,25 @@ A minimal, single-process metrics server that ingests [OTLP](https://opentelemet
 
 ## Installation
 
-Build from source and install as a system daemon (requires Go 1.24+):
+Install from a GitHub release with a single command (Linux and macOS):
 
-**Linux (systemd)**
 ```bash
-git clone https://github.com/bobcob7/lil-olt-metrics.git && cd lil-olt-metrics
-sudo scripts/install-linux.sh
+curl -fsSL https://github.com/bobcob7/lil-olt-metrics/releases/latest/download/install.sh | sudo bash
 ```
 
-**macOS (launchd)**
+The script auto-detects your OS and architecture, downloads the correct binary, installs it to `/usr/local/bin`, writes a default config, and registers a system service (systemd on Linux, launchd on macOS). It is idempotent and safe to re-run for updates.
+
+To install a specific version or skip service setup:
+
 ```bash
-git clone https://github.com/bobcob7/lil-olt-metrics.git && cd lil-olt-metrics
-sudo scripts/install-darwin.sh
+# Specific version
+curl -fsSL https://github.com/bobcob7/lil-olt-metrics/releases/latest/download/install.sh | sudo bash -s -- --version v0.2.0
+
+# Binary only, no service
+curl -fsSL https://github.com/bobcob7/lil-olt-metrics/releases/latest/download/install.sh | sudo bash -s -- --no-service
 ```
 
-Both scripts build the binary, install it to `/usr/local/bin`, write a default config (preserving any existing config), and register a system service. They are idempotent and safe to re-run for updates. See the [scripts/](scripts/) directory for details.
+See the [project website](https://bobcob7.github.io/lil-olt-metrics/) for more details.
 
 ## Quick Start
 

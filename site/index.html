@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lil-olt-metrics - Lightweight OTLP Metrics Server</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d29922;
+    --code-bg: #1c2129;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Nav */
+  nav {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+  }
+  nav .logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text);
+  }
+  nav .links { display: flex; gap: 1.5rem; font-size: 0.9rem; }
+  nav .links a { color: var(--text-muted); }
+  nav .links a:hover { color: var(--text); text-decoration: none; }
+
+  /* Sections */
+  .container {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+  section {
+    padding: 4rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  section:last-child { border-bottom: none; }
+
+  /* Hero */
+  .hero {
+    padding: 5rem 0 4rem;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: 2.75rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .tagline {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    max-width: 38rem;
+    margin: 0 auto 2rem;
+  }
+  .hero .cta {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+    padding: 0.6rem 1.5rem;
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+  .hero .cta:hover { opacity: 0.9; text-decoration: none; }
+
+  /* Features */
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1.25rem;
+  }
+  .feature {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+  .feature h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+  .feature p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  /* Architecture */
+  .arch-diagram {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--text-muted);
+    margin-top: 1rem;
+  }
+
+  /* Install */
+  .install-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+  }
+  .install-tab {
+    padding: 0.5rem 1.25rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    border-radius: 8px 8px 0 0;
+  }
+  .install-tab.active {
+    background: var(--code-bg);
+    color: var(--text);
+    border-color: var(--border);
+  }
+  .install-panel {
+    display: none;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 0 8px 8px 8px;
+    padding: 1.25rem;
+  }
+  .install-panel.active { display: block; }
+  .install-panel code {
+    display: block;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .install-note {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .install-option {
+    margin-top: 1.5rem;
+  }
+  .install-option h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Config */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.85rem;
+    overflow-x: auto;
+    margin-top: 1rem;
+    color: var(--text-muted);
+  }
+  .inline-code {
+    background: var(--code-bg);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.85em;
+  }
+  .section-desc {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--text-muted); font-weight: 600; }
+  td { color: var(--text); }
+  .badge {
+    display: inline-block;
+    background: #1a3a2a;
+    color: var(--green);
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--text-muted); }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 2rem; }
+    nav { padding: 0.75rem 1rem; }
+    nav .links { gap: 1rem; }
+    .feature-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">lil-olt-metrics</span>
+  <div class="links">
+    <a href="#features">Features</a>
+    <a href="#install">Install</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#config">Configuration</a>
+    <a href="https://github.com/bobcob7/lil-olt-metrics">GitHub</a>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- Hero -->
+<section class="hero">
+  <h1><span>lil-olt-metrics</span></h1>
+  <p class="tagline">
+    A lightweight, single-binary metrics server that ingests OpenTelemetry (OTLP)
+    metrics and serves them via the Prometheus HTTP API. No external dependencies.
+    Zero-config startup.
+  </p>
+  <a class="cta" href="#install">Install Now</a>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <h2>Features</h2>
+  <div class="feature-grid">
+    <div class="feature">
+      <h3>OTLP Ingestion</h3>
+      <p>gRPC and HTTP endpoints accept all OTLP metric types: Gauge, Sum, Histogram, ExponentialHistogram, and Summary.</p>
+    </div>
+    <div class="feature">
+      <h3>Prometheus API</h3>
+      <p>Full PromQL query engine. Drop-in Prometheus datasource for Grafana with instant, range, series, and label queries.</p>
+    </div>
+    <div class="feature">
+      <h3>Single Binary</h3>
+      <p>One static binary, no runtime dependencies. Runs anywhere: edge devices, dev machines, production servers.</p>
+    </div>
+    <div class="feature">
+      <h3>Pluggable Storage</h3>
+      <p>Built-in filesystem engine with WAL and compaction. Optional remote backends: Prometheus remote write, VictoriaMetrics.</p>
+    </div>
+    <div class="feature">
+      <h3>Zero Config</h3>
+      <p>Sensible defaults for everything. Just run the binary and it works. Customize later via YAML or environment variables.</p>
+    </div>
+    <div class="feature">
+      <h3>Delta Conversion</h3>
+      <p>Automatic delta-to-cumulative temporality conversion for OTel metrics that use delta aggregation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Install -->
+<section id="install">
+  <h2>Installation</h2>
+  <p class="section-desc">
+    Install with a single command. The script downloads the latest release binary,
+    installs it, and sets up a system service.
+  </p>
+
+  <div class="install-tabs">
+    <button class="install-tab active" onclick="showTab('linux')">Linux</button>
+    <button class="install-tab" onclick="showTab('macos')">macOS</button>
+    <button class="install-tab" onclick="showTab('binary')">Binary Only</button>
+  </div>
+
+  <div id="panel-linux" class="install-panel active">
+    <code>curl -fsSL https://github.com/bobcob7/lil-olt-metrics/releases/latest/download/install.sh | sudo bash</code>
+    <p class="install-note">
+      Installs the binary to <span class="inline-code">/usr/local/bin</span>, creates a
+      <span class="inline-code">lom</span> system user, writes a default config, and starts a systemd service.
+    </p>
+  </div>
+  <div id="panel-macos" class="install-panel">
+    <code>curl -fsSL https://github.com/bobcob7/lil-olt-metrics/releases/latest/download/install.sh | sudo bash</code>
+    <p class="install-note">
+      Installs the binary to <span class="inline-code">/usr/local/bin</span>, writes a default config, and registers a
+      launchd daemon. The script auto-detects macOS.
+    </p>
+  </div>
+  <div id="panel-binary" class="install-panel">
+    <code># Download the binary directly (no service setup)
+curl -fsSL https://github.com/bobcob7/lil-olt-metrics/releases/latest/download/install.sh | sudo bash -s -- --no-service
+
+# Or download manually for your platform
+curl -fsSL -o lil-olt-metrics \
+  https://github.com/bobcob7/lil-olt-metrics/releases/latest/download/lil-olt-metrics-linux-amd64
+chmod +x lil-olt-metrics
+./lil-olt-metrics</code>
+    <p class="install-note">
+      Available binaries: <span class="inline-code">linux-amd64</span>,
+      <span class="inline-code">linux-arm64</span>,
+      <span class="inline-code">darwin-amd64</span>,
+      <span class="inline-code">darwin-arm64</span>.
+    </p>
+  </div>
+
+  <div class="install-option">
+    <h3>Install a specific version</h3>
+    <pre>curl -fsSL https://github.com/bobcob7/lil-olt-metrics/releases/latest/download/install.sh \
+  | sudo bash -s -- --version v0.2.0</pre>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p class="section-desc">
+    OTLP metrics flow in via gRPC or HTTP, get translated to the Prometheus data model,
+    and are stored in a pluggable backend. The Prometheus API serves PromQL queries to
+    clients like Grafana.
+  </p>
+  <div class="arch-diagram">                      +---------------------+
+  OTLP gRPC :4317 ---&gt;|                     |
+                      |   lil-olt-metrics   |---&gt; Prometheus API :9090 ---&gt; Grafana
+  OTLP HTTP :4318 ---&gt;|                     |
+                      +---------------------+
+                              |
+                      +-------+-------+
+                      |       |       |
+                     FS   Prometheus  VM
+                    store   remote   remote</div>
+
+  <table>
+    <thead><tr><th>Stage</th><th>Package</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>Ingestion</td><td><span class="inline-code">internal/ingest</span></td><td>gRPC and HTTP handlers for OTLP ExportMetricsServiceRequest</td></tr>
+      <tr><td>Translation</td><td><span class="inline-code">internal/ingest</span></td><td>OTLP to Prometheus sample conversion with label mapping and unit suffixes</td></tr>
+      <tr><td>Storage</td><td><span class="inline-code">internal/store</span></td><td>Appender interface with filesystem, Prometheus, and VictoriaMetrics backends</td></tr>
+      <tr><td>Query</td><td><span class="inline-code">internal/query</span></td><td>Prometheus HTTP API with embedded PromQL engine</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- Configuration -->
+<section id="config">
+  <h2>Configuration</h2>
+  <p class="section-desc">
+    Configuration is loaded in order of precedence: environment variables
+    (<span class="inline-code">LOM_</span> prefix), YAML config file, then built-in defaults.
+  </p>
+
+  <h3>Default ports</h3>
+  <table>
+    <thead><tr><th>Port</th><th>Protocol</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>4317</td><td>gRPC</td><td>OTLP metric ingestion</td></tr>
+      <tr><td>4318</td><td>HTTP</td><td>OTLP metric ingestion</td></tr>
+      <tr><td>9090</td><td>HTTP</td><td>Prometheus query API</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:1.5rem">Minimal YAML config</h3>
+  <pre>storage:
+  fs:
+    path: /var/lib/lil-olt-metrics</pre>
+
+  <h3 style="margin-top:1.5rem">Remote backend example</h3>
+  <pre>storage:
+  engine: prometheus
+  prometheus:
+    write_url: http://prometheus:9090/api/v1/write
+    read_url: http://prometheus:9090/api/v1/read</pre>
+
+  <h3 style="margin-top:1.5rem">Quick test</h3>
+  <pre># Send test metrics
+telemetrygen metrics --otlp-insecure --duration 10s
+
+# Query via Prometheus API
+curl 'http://localhost:9090/api/v1/query?query=up'
+
+# List all metric names
+curl 'http://localhost:9090/api/v1/label/__name__/values'</pre>
+</section>
+
+<!-- OTLP Support -->
+<section id="otlp">
+  <h2>OTLP Support</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Gauge</td><td><span class="badge">Supported</span></td></tr>
+      <tr><td>Sum (Counter)</td><td><span class="badge">Supported</span></td></tr>
+      <tr><td>Histogram</td><td><span class="badge">Supported</span></td></tr>
+      <tr><td>ExponentialHistogram</td><td><span class="badge">Supported</span></td></tr>
+      <tr><td>Summary</td><td><span class="badge">Supported</span></td></tr>
+      <tr><td>Delta-to-cumulative conversion</td><td><span class="badge">Supported</span></td></tr>
+      <tr><td>Resource attribute mapping</td><td><span class="badge">Supported</span></td></tr>
+      <tr><td>Protobuf content type</td><td><span class="badge">Supported</span></td></tr>
+      <tr><td>JSON content type</td><td><span class="badge">Supported</span></td></tr>
+      <tr><td>gzip compression</td><td><span class="badge">Supported</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+</div>
+
+<footer>
+  <a href="https://github.com/bobcob7/lil-olt-metrics">GitHub</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/bobcob7/lil-olt-metrics/releases">Releases</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/bobcob7/lil-olt-metrics/blob/main/docs/config-reference.md">Config Reference</a>
+</footer>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.install-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.install-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+</script>
+</body>
+</html>

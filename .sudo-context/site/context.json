@@ -1,0 +1,26 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "site",
+  "git_ref": "57b40d8",
+  "updated_at": "2026-03-07T06:41:14Z",
+  "sections": {
+    "description": "Single-page documentation website for lil-olt-metrics, deployed to GitHub Pages.",
+    "purpose": "Provide a public-facing project website that explains what lil-olt-metrics is, how to install it, its architecture, configuration options, and OTLP feature support. Hosted via GitHub Pages from the site/ directory.",
+    "strengths": [
+      "Self-contained single HTML file with inline CSS and JS \u2014 no build step or dependencies",
+      "Dark theme consistent with the project's dashboard.html design language",
+      "Responsive layout that works on mobile and desktop",
+      "Tabbed install instructions for Linux, macOS, and binary-only workflows",
+      "Architecture diagram and feature/OTLP support tables provide quick reference"
+    ],
+    "weaknesses": [
+      "Single HTML file \u2014 adding more pages would require restructuring or a static site generator",
+      "No search functionality",
+      "Install command URLs are hardcoded to the bobcob7/lil-olt-metrics repo"
+    ],
+    "test_coverage": "No tests. Static HTML page verified by visual inspection.",
+    "dependencies": "None. Self-contained HTML/CSS/JS. Deployed via .github/workflows/pages.yml using GitHub Pages actions.",
+    "functionality": "Sections: hero with tagline, feature grid (6 cards), tabbed installation instructions (Linux/macOS/binary), architecture diagram with pipeline table, configuration examples (ports, YAML, remote backend, quick test), OTLP feature support table. Navigation bar links to all sections and GitHub repo. Tab switching via vanilla JS.",
+    "files": "| File | Description |\n|---|---|\n| index.html | Single-page documentation website with project overview, install instructions, architecture, config examples, and OTLP support table |"
+  }
+}
