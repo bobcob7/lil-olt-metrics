@@ -1,18 +1,20 @@
 {
   "repo": "bobcob7/lil-olt-metrics",
   "directory": ".",
-  "git_ref": "af08839",
-  "updated_at": "2026-02-25T23:48:38Z",
+  "git_ref": "ec64221",
+  "updated_at": "2026-03-07T06:33:28Z",
   "sections": {
-    "description": "lil-olt-metrics is a minimal, single-process metrics server that ingests OpenTelemetry Protocol (OTLP) metrics via gRPC and HTTP and serves them via the Prometheus HTTP API. It combines OTLP ingestion, metric translation to Prometheus data model, pluggable storage backends (filesystem, Prometheus remote write, VictoriaMetrics), and a full PromQL query engine. Designed for edge deployments, dev environments, and lightweight production use with zero-config startup and no external dependencies.",
-    "purpose": "Provide a lightweight, self-contained metrics aggregation and querying system for OTLP-based observability workflows. Act as a bridge between OTel metric sources and Prometheus-compatible monitoring stacks like Grafana, enabling metrics collection without heavyweight infrastructure.",
+    "description": "lil-olt-metrics is a minimal, single-process metrics server that ingests OTLP metrics via gRPC and HTTP, stores them in pluggable backends, and serves them via the Prometheus HTTP API with an embedded Claude Code metrics dashboard.",
+    "purpose": "Provide a lightweight, self-contained metrics aggregation and querying system for OTLP-based observability workflows. Act as a bridge between OTel metric sources and Prometheus-compatible monitoring stacks like Grafana, enabling metrics collection without heavyweight infrastructure. Includes an embedded HTML dashboard for visualizing Claude Code session metrics.",
     "strengths": [
       "Zero-config startup with sensible defaults; runs as single binary with no external dependencies",
       "Full OTLP feature support: all metric types (Gauge, Sum, Histogram, ExponentialHistogram, Summary), protobuf and JSON, gzip compression, delta-to-cumulative conversion",
       "Complete Prometheus API compatibility including instant/range queries, series, labels, metadata, buildinfo endpoints; PromQL engine embedded and functional",
       "Multiple pluggable storage backends: built-in filesystem with WAL and block compaction, Prometheus remote write/read, VictoriaMetrics import/export",
-      "Production-ready: data retention policies (age/size), graceful shutdown, gRPC/HTTP error handling, structured logging with slog",
-      "Well-organized codebase following Go best practices: unexported by default, dependency injection, interfaces at consumer site, moq-generated mocks, parallel tests with t.Parallel()"
+      "Production-ready: data retention policies (age/size), graceful shutdown, gRPC/HTTP error handling, structured logging with slog, CORS middleware",
+      "Well-organized codebase following Go best practices: unexported by default, dependency injection, interfaces at consumer site, moq-generated mocks, parallel tests with t.Parallel()",
+      "Embedded HTML dashboard served at /dashboard with activity heatmap, token usage, cost breakdown, cache efficiency, and auto-refresh",
+      "Platform-specific install scripts for macOS and Linux that build from source"
     ],
     "weaknesses": [
       "Single-process design limits horizontal scalability; not suitable for high-cardinality distributed metrics at scale",
@@ -21,8 +23,27 @@
       "Limited metric cardinality handling compared to production-grade systems; memory footprint grows with unique label combinations"
     ],
     "test_coverage": "Comprehensive test suite across all packages. cmd/server: integration with graceful shutdown, flag parsing. internal/config: YAML loading, defaults, env var override. internal/ingest: OTLP gRPC/HTTP handlers, protobuf/JSON parsing, translator logic. internal/store: filesystem WAL/compaction, Prometheus remote write/read, VictoriaMetrics. internal/query: Prometheus API endpoints. internal/integration: end-to-end tests with telemetry generation. All tests use t.Parallel(), t.Context(), moq mocks, structured logging. No integration tests requiring external services.",
-    "dependencies": "Core: prometheus/prometheus (PromQL engine, data model), go.opentelemetry.io/proto/otlp (OTLP Protobuf definitions), google.golang.org/grpc (gRPC server), google.golang.org/protobuf (Protobuf runtime), gopkg.in/yaml.v3 (config parsing), golang/snappy (WAL compression). Dev: golangci-lint v1.64.8, moq v0.6.0, testify v1.11.1, gofumpt v0.9.2. Go 1.25.5 minimum. Dockerfile uses golang:1.25-alpine builder, distroless static-debian12 runtime.",
-    "functionality": "1. Ingestion: gRPC (port 4317) and HTTP (port 4318) endpoints accept OTLP ExportMetricsServiceRequest. 2. Translation: Converts OTLP metric types to Prometheus samples, applies unit suffixes, maps resource attributes to labels, records schema URLs. 3. Storage: Samples written via Appender interface to configured backend (FS, Prometheus, VictoriaMetrics). 4. Query: Prometheus HTTP API (/api/v1/*) backed by embedded PromQL engine for instant/range queries, series metadata, label enumeration, metadata lookup. CORS support for browser-based clients. 5. Dashboard: Standalone HTML dashboard (dashboard.html) queries the Prometheus API to visualize Claude Code metrics \u2014 token usage by model/type, cost breakdown, cache efficiency, active time per session \u2014 with auto-refresh and configurable time ranges. 6. Configuration: Loaded from env vars (LOM_* prefix), YAML file, or defaults. 7. Lifecycle: Graceful shutdown on SIGTERM/SIGINT, drain in-flight requests, close backends.",
-    "files": "Root: go.mod, go.sum (Go dependencies), Makefile (build/test/lint/fmt targets), .golangci.yml (linter config: errcheck, govet, staticcheck, revive, unused, ineffassign), README.md (overview, quickstart, architecture, configuration examples), CHANGELOG.md (v0.1.0 release notes), Dockerfile (multi-stage Alpine builder, distroless runtime), docker-compose.yml (server + Grafana integration), dashboard.html (standalone Claude Code metrics dashboard, queries Prometheus API, Chart.js visualizations for tokens/cost/sessions/cache efficiency), .gitignore, grafana-datasource.yml. Subdirs: cmd/server/ (main.go entrypoint, flag parsing, wiring), internal/{config,ingest,query,store,integration,tools}/ (packages), docs/ (architecture, OTLP/Prometheus API reference), plans/ (roadmap). CI/CD: .github/workflows/{ci.yml (lint/test), release.yml (build/publish)}."
+    "dependencies": [
+      "Go 1.25.5 minimum",
+      "prometheus/prometheus v0.309.1 \u2014 PromQL engine and data model",
+      "go.opentelemetry.io/proto/otlp v1.9.0 \u2014 OTLP Protobuf definitions",
+      "google.golang.org/grpc v1.78.0 \u2014 gRPC server",
+      "google.golang.org/protobuf v1.36.11 \u2014 Protobuf runtime",
+      "gopkg.in/yaml.v3 v3.0.1 \u2014 config parsing",
+      "golang/snappy v1.0.0 \u2014 WAL compression",
+      "Dev: golangci-lint v1.64.8, moq v0.6.0, testify v1.11.1, gofumpt v0.9.2",
+      "Dockerfile: golang:1.25-alpine builder, distroless static-debian12 runtime"
+    ],
+    "functionality": [
+      "Ingestion: gRPC (port 4317) and HTTP (port 4318) endpoints accept OTLP ExportMetricsServiceRequest",
+      "Translation: Converts OTLP metric types to Prometheus samples, applies unit suffixes, maps resource attributes to labels, records schema URLs",
+      "Storage: Samples written via Appender interface to configured backend (FS, Prometheus, VictoriaMetrics)",
+      "Query: Prometheus HTTP API (/api/v1/*) backed by embedded PromQL engine for instant/range queries, series metadata, label enumeration, metadata lookup with CORS support",
+      "Dashboard: Embedded HTML dashboard at /dashboard visualizes Claude Code metrics \u2014 token usage by model/type, cost breakdown, cache efficiency, active time per session, code activity metrics, and activity trends heatmap \u2014 with auto-refresh and configurable time ranges",
+      "Configuration: Loaded from env vars (LOM_* prefix), YAML file, or defaults",
+      "Lifecycle: Graceful shutdown on SIGTERM/SIGINT, drain in-flight requests, close backends",
+      "Install scripts: Platform-specific scripts (macOS/Linux) that build from source and install the binary"
+    ],
+    "files": "| File | Description |\n|---|---|\n| go.mod | Go module definition, Go 1.25.5, direct and indirect dependencies |\n| go.sum | Dependency checksums |\n| Makefile | Build, test, lint, fmt, generate targets; installs tools to local bin |\n| .golangci.yml | Linter config (v2 format): errcheck, govet, staticcheck, revive, unused, ineffassign, gofumpt formatter |\n| Dockerfile | Multi-stage build: golang:1.25-alpine builder, distroless static-debian12 runtime |\n| docker-compose.yml | Server + Grafana integration stack with volume mounts |\n| grafana-datasource.yml | Grafana provisioning datasource for the Prometheus API |\n| README.md | Project overview, quickstart, architecture, configuration examples |\n| CHANGELOG.md | Release notes (v0.1.0) |\n| .gitignore | Git ignore rules |\n| .github/ | CI/CD workflows (ci.yml, release.yml) and CODEOWNERS file |\n| cmd/ | Server entrypoint (cmd/server/main.go): flag parsing, dependency wiring, graceful shutdown |\n| internal/ | Core packages: config, ingest (OTLP gRPC/HTTP + translator), query (Prometheus API + embedded dashboard), store (fs, mem, Prometheus remote, VictoriaMetrics), integration tests, tools |\n| scripts/ | Platform-specific install scripts: install-darwin.sh (macOS), install-linux.sh (Linux) |\n| docs/ | Architecture docs, OTLP standard reference, Prometheus API reference, config reference |\n| plans/ | Roadmap and implementation plans |"
   }
 }
