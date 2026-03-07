@@ -1,0 +1,25 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web/src",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:00:33Z",
+  "sections": {
+    "description": "Root source directory for the Vue.js dashboard SPA, containing the app entry point, Vue root component, and all sub-modules.",
+    "purpose": "Organizes the dashboard frontend into api/, composables/, components/, utils/, styles/, and __tests__/ sub-directories following Vue 3 Composition API conventions.",
+    "strengths": [
+      "Clean separation: API client, composables, components, utilities, and styles each in their own directory",
+      "Single entry point (main.ts) mounts the app and imports global styles"
+    ],
+    "weaknesses": [
+      "No router \u2014 single-page only; would need vue-router if dashboard grows to multiple views"
+    ],
+    "test_coverage": "Tests in __tests__/ directory cover utility functions (format.ts, heatmap.ts). No component tests.",
+    "dependencies": [
+      "vue \u2014 createApp",
+      "./App.vue \u2014 root component",
+      "./styles/global.css \u2014 CSS custom properties and base reset"
+    ],
+    "functionality": "- main.ts creates and mounts the Vue app\n- App.vue is the root component that orchestrates all composables and child components\n- Sub-directories contain all feature code",
+    "files": "| File | Description |\n|------|-------------|\n| main.ts | App entry point: creates Vue app, imports global CSS, mounts to #app |\n| App.vue | Root component: wires useTimeRange, useAutoRefresh, useDashboardData composables; renders header, error banner, summary cards, activity trends, time series charts, and collapsible sections |"
+  }
+}

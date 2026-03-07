@@ -1,0 +1,29 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web/src/components",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:01:16Z",
+  "sections": {
+    "description": "Vue 3 single-file components for the dashboard UI, organized into layout components, section containers, and sub-directories for charts and heatmaps.",
+    "purpose": "Provides all visual building blocks for the dashboard: header with controls, error display, summary metric cards, collapsible sections, and container components that compose chart and heatmap sub-components.",
+    "strengths": [
+      "Each component is self-contained with <style module> for scoped CSS",
+      "Section containers (CodeActivity, TokenBreakdown, EfficiencyAnalysis) compose chart components into logical groups",
+      "CollapsibleSection is a generic wrapper using native <details>/<summary> elements"
+    ],
+    "weaknesses": [
+      "Some CSS duplication across panel/grid styles in section containers",
+      "No loading skeleton states for initial data fetch"
+    ],
+    "test_coverage": "No component tests. Components are tested implicitly through manual verification.",
+    "dependencies": [
+      "vue (defineProps, defineEmits, computed, ref)",
+      "../composables/* (useTimeRange constants)",
+      "../utils/* (fmtNum, fmtCost, fmtDuration)",
+      "./charts/* (chart components)",
+      "./ActivityTrends/* (heatmap components)"
+    ],
+    "functionality": "- DashboardHeader: title, time range <select>, auto-refresh checkbox, last updated timestamp\n- ErrorBanner: conditional red banner for fetch errors\n- SummaryCards: 7 metric cards (tokens, cost, active time, sessions, commits, PRs, lines changed) with computed sub-text\n- CollapsibleSection: generic <details>/<summary> wrapper with title prop and optional open state\n- CodeActivity: section container with LanguagesChart, ToolUsageDonut, acceptance rate gauge, LocOverTime\n- TokenBreakdown: section container with TokensByModel, CostByModel, token detail table\n- EfficiencyAnalysis: section container with cache efficiency gauge, TokenTypePie, CostPer1k, ActivityBySession",
+    "files": "| File | Description |\n|------|-------------|\n| DashboardHeader.vue | Header with time range selector, auto-refresh toggle, last updated |\n| ErrorBanner.vue | Conditional error message display |\n| SummaryCards.vue | 7 metric summary cards with computed sub-text |\n| CollapsibleSection.vue | Generic <details>/<summary> wrapper |\n| CodeActivity.vue | Code activity section: languages, tools, acceptance rate, LoC |\n| TokenBreakdown.vue | Token section: by-model chart, cost donut, detail table |\n| EfficiencyAnalysis.vue | Efficiency section: cache gauge, token pie, cost/1K, activity by session |\n| ActivityTrends/ | Heatmap sub-components (calendar, weekday, hourly) |\n| charts/ | Chart.js visualization components |"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web/src/styles",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:01:51Z",
+  "sections": {
+    "description": "Global CSS styles including CSS custom properties and base element reset.",
+    "purpose": "Define the dark theme color palette via CSS custom properties (:root variables) and apply base reset styles. Imported once in main.ts; component-specific styles use <style module> in SFCs.",
+    "strengths": [
+      "CSS custom properties enable consistent theming across all components",
+      "Minimal reset \u2014 only box-sizing, margin, padding"
+    ],
+    "weaknesses": [
+      "No light theme variant",
+      "Media query breakpoints duplicated from original HTML; could be extracted to variables"
+    ],
+    "test_coverage": "No tests (CSS).",
+    "dependencies": [
+      "None \u2014 pure CSS"
+    ],
+    "functionality": "- :root CSS custom properties: --bg, --surface, --border, --text, --text-muted, --accent, --green, --orange, --red, --purple, --pink\n- Global reset: box-sizing border-box, zero margin/padding\n- Body: dark background, system font stack, 1.5rem padding\n- Form elements: dark-themed select styling with accent focus\n- Table: full-width, collapsed borders, muted headers, tabular-nums for numeric cells\n- Responsive: @media (max-width: 500px) adjusts grid and card layouts",
+    "files": "| File | Description |\n|------|-------------|\n| global.css | CSS custom properties, base reset, form/table styles, responsive breakpoints |"
+  }
+}

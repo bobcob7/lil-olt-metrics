@@ -1,0 +1,25 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web/src/api",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:00:48Z",
+  "sections": {
+    "description": "Typed Prometheus HTTP API client for fetching metrics data.",
+    "purpose": "Provides typed functions for querying the Prometheus-compatible API endpoints, isolating all HTTP fetch logic and response parsing from the rest of the application.",
+    "strengths": [
+      "Fully typed with TypeScript interfaces for Prometheus responses",
+      "Handles {step} template replacement in range queries",
+      "getVal helper sums multi-series results safely"
+    ],
+    "weaknesses": [
+      "No request cancellation (AbortController) for in-flight queries when time range changes",
+      "Error messages are generic; could include query text for debugging"
+    ],
+    "test_coverage": "No direct tests. Indirectly tested through composable integration.",
+    "dependencies": [
+      "Native fetch API"
+    ],
+    "functionality": "- promQuery(query) \u2014 instant query via /api/v1/query, returns PromResult[]\n- promRangeQuery(query, start, end, step) \u2014 range query via /api/v1/query_range with {step} template substitution, returns PromRangeResult[]\n- getVal(result) \u2014 sums all values from an instant query result array",
+    "files": "| File | Description |\n|------|-------------|\n| types.ts | TypeScript interfaces: PromResult (instant query), PromRangeResult (range query), PromResponse<T> (API envelope) |\n| prometheus.ts | API client functions: promQuery, promRangeQuery, getVal |"
+  }
+}

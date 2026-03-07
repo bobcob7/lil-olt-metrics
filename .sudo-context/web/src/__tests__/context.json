@@ -1,0 +1,25 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web/src/__tests__",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:00:40Z",
+  "sections": {
+    "description": "Vitest test files for frontend utility functions.",
+    "purpose": "Unit tests for pure utility functions (format.ts, heatmap.ts) to verify formatting logic and heatmap level computation.",
+    "strengths": [
+      "Tests cover edge cases: zero, negative, boundary values",
+      "Fast execution (~250ms for all 15 tests)"
+    ],
+    "weaknesses": [
+      "Only covers utility functions; no tests for API client, composables, or Vue components"
+    ],
+    "test_coverage": "format.test.ts: 11 tests covering fmtNum (billions, millions, thousands, small, zero), fmtCost (dollars, cents, sub-cent), fmtDuration (hours, minutes, seconds). heatmap.test.ts: 4 tests covering computeLevels (all zeros, empty array, percentile-based levels, negative values).",
+    "dependencies": [
+      "vitest \u2014 test runner (describe, it, expect)",
+      "../utils/format \u2014 fmtNum, fmtCost, fmtDuration",
+      "../utils/heatmap \u2014 computeLevels"
+    ],
+    "functionality": "Vitest unit tests for utility modules. Run via `npm test` or `npx vitest run`.",
+    "files": "| File | Description |\n|------|-------------|\n| format.test.ts | Tests for fmtNum, fmtCost, fmtDuration |\n| heatmap.test.ts | Tests for computeLevels |"
+  }
+}
