@@ -1,0 +1,27 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web/src/composables",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:00:59Z",
+  "sections": {
+    "description": "Vue 3 Composition API composables for dashboard state management.",
+    "purpose": "Encapsulate reactive state and business logic (time range selection, auto-refresh scheduling, Prometheus data fetching/parsing) as reusable composable functions, keeping components thin.",
+    "strengths": [
+      "No external state library needed \u2014 Vue refs + composables are sufficient for this single-page app",
+      "useDashboardData parses all Prometheus responses into a single typed DashboardData object",
+      "useAutoRefresh properly cleans up intervals on unmount"
+    ],
+    "weaknesses": [
+      "useDashboardData makes 11 API calls per refresh (8 instant + 3 range); could batch or cache",
+      "No loading/pending state exposed from useDashboardData"
+    ],
+    "test_coverage": "No direct tests for composables.",
+    "dependencies": [
+      "vue (ref, watch, onMounted, onBeforeUnmount)",
+      "../api/prometheus (promQuery, promRangeQuery, getVal)",
+      "../api/types (PromResult, PromRangeResult)"
+    ],
+    "functionality": "- useTimeRange: selectedRange ref (default '30d'), STEP_MAP, RANGE_SECONDS, TIME_RANGE_OPTIONS constants\n- useAutoRefresh: 30s interval toggle with enabled ref, start/stop/toggle methods, auto-cleanup on unmount\n- useDashboardData: orchestrates all Prometheus fetches, parses responses into DashboardData interface (totalTokens, totalCost, totalActive, totalSessions, totalCommits, totalPRs, linesAdded/Removed, modelTokens, costByModel, langCounts, toolCounts, accept/reject, activeTimeBySession, tokensRange, costRange, locRange), exposes data/error/lastUpdated refs",
+    "files": "| File | Description |\n|------|-------------|\n| useTimeRange.ts | Time range selection state, step/range constants |\n| useAutoRefresh.ts | 30s interval auto-refresh with toggle and cleanup |\n| useDashboardData.ts | Prometheus data fetching, parsing, and reactive state management |"
+  }
+}

@@ -1,11 +1,11 @@
 {
   "repo": "bobcob7/lil-olt-metrics",
   "directory": ".",
-  "git_ref": "57b40d8",
-  "updated_at": "2026-03-07T06:41:39Z",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T15:59:29Z",
   "sections": {
-    "description": "lil-olt-metrics is a minimal, single-process metrics server that ingests OTLP metrics via gRPC and HTTP, stores them in pluggable backends, and serves them via the Prometheus HTTP API with an embedded Claude Code metrics dashboard.",
-    "purpose": "Provide a lightweight, self-contained metrics aggregation and querying system for OTLP-based observability workflows. Act as a bridge between OTel metric sources and Prometheus-compatible monitoring stacks like Grafana, enabling metrics collection without heavyweight infrastructure. Includes an embedded HTML dashboard for visualizing Claude Code session metrics.",
+    "description": "lil-olt-metrics is a minimal, single-process metrics server that ingests OTLP metrics via gRPC and HTTP, stores them in pluggable backends, and serves them via the Prometheus HTTP API with an embedded Vue.js SPA dashboard for visualizing Claude Code metrics.",
+    "purpose": "Provide a lightweight, self-contained metrics aggregation and querying system for OTLP-based observability workflows. Act as a bridge between OTel metric sources and Prometheus-compatible monitoring stacks like Grafana, enabling metrics collection without heavyweight infrastructure. Includes an embedded Vue.js + Vite SPA dashboard for visualizing Claude Code session metrics.",
     "strengths": [
       "Zero-config startup with sensible defaults; runs as single binary with no external dependencies",
       "Full OTLP feature support: all metric types (Gauge, Sum, Histogram, ExponentialHistogram, Summary), protobuf and JSON, gzip compression, delta-to-cumulative conversion",
@@ -13,7 +13,8 @@
       "Multiple pluggable storage backends: built-in filesystem with WAL and block compaction, Prometheus remote write/read, VictoriaMetrics import/export",
       "Production-ready: data retention policies (age/size), graceful shutdown, gRPC/HTTP error handling, structured logging with slog, CORS middleware",
       "Well-organized codebase following Go best practices: unexported by default, dependency injection, interfaces at consumer site, moq-generated mocks, parallel tests with t.Parallel()",
-      "Embedded HTML dashboard served at /dashboard with activity heatmap, token usage, cost breakdown, cache efficiency, and auto-refresh",
+      "Embedded Vue.js SPA dashboard served at /dashboard/ with activity heatmap, token usage, cost breakdown, cache efficiency, Chart.js visualizations, and auto-refresh",
+      "Multi-stage build pipeline: Vite frontend build embedded via Go embed.FS, Docker multi-stage with Node.js + Go stages",
       "Platform-specific install scripts for macOS and Linux that build from source"
     ],
     "weaknesses": [
@@ -22,19 +23,20 @@
       "Delta-to-cumulative conversion with TTL eviction may lose state during restarts",
       "Limited metric cardinality handling compared to production-grade systems; memory footprint grows with unique label combinations"
     ],
-    "test_coverage": "Comprehensive test suite across all packages. cmd/server: integration with graceful shutdown, flag parsing. internal/config: YAML loading, defaults, env var override. internal/ingest: OTLP gRPC/HTTP handlers, protobuf/JSON parsing, translator logic. internal/store: filesystem WAL/compaction, Prometheus remote write/read, VictoriaMetrics. internal/query: Prometheus API endpoints. internal/integration: end-to-end tests with telemetry generation. All tests use t.Parallel(), t.Context(), moq mocks, structured logging. No integration tests requiring external services.",
+    "test_coverage": "Comprehensive test suite across all packages. cmd/server: integration with graceful shutdown, flag parsing. internal/config: YAML loading, defaults, env var override. internal/ingest: OTLP gRPC/HTTP handlers, protobuf/JSON parsing, translator logic. internal/store: filesystem WAL/compaction, Prometheus remote write/read, VictoriaMetrics. internal/query: Prometheus API endpoints, dashboard redirect and SPA serving. internal/integration: end-to-end tests with telemetry generation. All Go tests use t.Parallel(), t.Context(), moq mocks, structured logging. Frontend: Vitest tests for utility functions (format.ts, heatmap.ts).",
     "dependencies": [
       "Go 1.25.5 minimum",
+      "Node.js 20 (for frontend build)",
       "prometheus/prometheus v0.309.1 \u2014 PromQL engine and data model",
       "go.opentelemetry.io/proto/otlp v1.9.0 \u2014 OTLP Protobuf definitions",
       "google.golang.org/grpc v1.78.0 \u2014 gRPC server",
       "google.golang.org/protobuf v1.36.11 \u2014 Protobuf runtime",
       "gopkg.in/yaml.v3 v3.0.1 \u2014 config parsing",
       "golang/snappy v1.0.0 \u2014 WAL compression",
-      "Dev: golangci-lint v1.64.8, moq v0.6.0, testify v1.11.1, gofumpt v0.9.2",
-      "Dockerfile: golang:1.25-alpine builder, distroless static-debian12 runtime"
+      "Frontend: Vue 3.5, Vite 6, Chart.js 4, chartjs-adapter-date-fns 3, TypeScript 5.7, Vitest 3",
+      "Dev: golangci-lint v2.9.0, moq v0.6.0, testify v1.11.1, gofumpt v0.9.2, vue-tsc"
     ],
-    "functionality": "1. Ingestion: gRPC (port 4317) and HTTP (port 4318) endpoints accept OTLP ExportMetricsServiceRequest. 2. Translation: Converts OTLP metric types to Prometheus samples, applies unit suffixes, maps resource attributes to labels, records schema URLs. 3. Storage: Samples written via Appender interface to configured backend (FS, Prometheus, VictoriaMetrics). 4. Query: Prometheus HTTP API (/api/v1/*) backed by embedded PromQL engine for instant/range queries, series metadata, label enumeration, metadata lookup. CORS support for browser-based clients. 5. Dashboard: Standalone HTML dashboard (dashboard.html) queries the Prometheus API to visualize Claude Code metrics \u2014 token usage by model/type, cost breakdown, cache efficiency, active time per session \u2014 with auto-refresh and configurable time ranges. 6. Configuration: Loaded from env vars (LOM_* prefix), YAML file, or defaults. 7. Lifecycle: Graceful shutdown on SIGTERM/SIGINT, drain in-flight requests, close backends. 8. Installation: Universal install script downloads pre-built binaries from GH releases and sets up system services. 9. Website: Single-page documentation site deployed to GitHub Pages.",
-    "files": "Root: go.mod, go.sum (Go dependencies), Makefile (build/test/lint/fmt targets), .golangci.yml (linter config: errcheck, govet, staticcheck, revive, unused, ineffassign), README.md (overview, quickstart, architecture, configuration examples), CHANGELOG.md (v0.1.0 release notes), Dockerfile (multi-stage Alpine builder, distroless runtime), docker-compose.yml (server + Grafana integration), .gitignore, grafana-datasource.yml. Subdirs: cmd/server/ (main.go entrypoint, flag parsing, wiring), internal/{config,ingest,query,store,integration,tools}/ (packages), docs/ (architecture, OTLP/Prometheus API reference), plans/ (roadmap), scripts/ (install scripts), site/ (documentation website for GH Pages). CI/CD: .github/workflows/{ci.yml (lint/test), release.yml (build/publish on semver tags, attaches binaries and install.sh), pages.yml (deploys site/ to GitHub Pages)}."
+    "functionality": "1. Ingestion: gRPC (port 4317) and HTTP (port 4318) endpoints accept OTLP ExportMetricsServiceRequest. 2. Translation: Converts OTLP metric types to Prometheus samples, applies unit suffixes, maps resource attributes to labels, records schema URLs. 3. Storage: Samples written via Appender interface to configured backend (FS, Prometheus, VictoriaMetrics). 4. Query: Prometheus HTTP API (/api/v1/*) backed by embedded PromQL engine for instant/range queries, series metadata, label enumeration, metadata lookup. CORS support for browser-based clients. 5. Dashboard: Vue.js SPA built with Vite and TypeScript, embedded via Go embed.FS, served at /dashboard/. Visualizes Claude Code metrics \u2014 token usage by model/type, cost breakdown, cache efficiency, active time per session, activity heatmaps \u2014 with auto-refresh and configurable time ranges. 6. Configuration: Loaded from env vars (LOM_* prefix), YAML file, or defaults. 7. Lifecycle: Graceful shutdown on SIGTERM/SIGINT, drain in-flight requests, close backends. 8. Installation: Universal install script downloads pre-built binaries from GH releases and sets up system services. 9. Website: Single-page documentation site deployed to GitHub Pages.",
+    "files": "Root: go.mod, go.sum (Go dependencies), Makefile (build/test/lint/fmt targets, frontend build), .golangci.yml (linter config), README.md, CHANGELOG.md, Dockerfile (multi-stage: Node.js frontend + Go builder + distroless runtime), docker-compose.yml, .gitignore. Subdirs: cmd/server/ (main.go entrypoint), internal/{config,ingest,query,store,integration,tools}/ (Go packages), web/ (Vue.js + Vite + TypeScript SPA), docs/ (architecture, API reference), plans/ (roadmap), scripts/ (install scripts), site/ (documentation website). CI/CD: .github/workflows/{ci.yml (lint/test/build with Node.js + Go), release.yml (frontend build + Go cross-compilation + publish), pages.yml (deploys site/ to GitHub Pages)}."
   }
 }

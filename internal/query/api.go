@@ -1,9 +1,10 @@
 package query
 
 import (
-	_ "embed"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"math"
 	"net/http"
@@ -19,8 +20,8 @@ import (
 	"github.com/prometheus/prometheus/storage"
 )
 
-//go:embed dashboard.html
-var dashboardHTML []byte
+//go:embed dashboard/dist
+var dashboardFS embed.FS
 
 // BuildInfo holds version and build metadata returned by /api/v1/status/buildinfo.
 type BuildInfo struct {
@@ -59,7 +60,11 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("/api/v1/label/", a.labelValues)
 	mux.HandleFunc("/api/v1/metadata", a.metadata)
 	mux.HandleFunc("/api/v1/status/buildinfo", a.statusBuildInfo)
-	mux.HandleFunc("/dashboard", a.dashboard)
+	sub, _ := fs.Sub(dashboardFS, "dashboard/dist")
+	mux.Handle("/dashboard/", http.StripPrefix("/dashboard", http.FileServerFS(sub)))
+	mux.HandleFunc("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/dashboard/", http.StatusMovedPermanently)
+	})
 	return loggingMiddleware(a.logger, corsMiddleware(mux))
 }
 
@@ -312,14 +317,6 @@ func (a *API) statusBuildInfo(w http.ResponseWriter, _ *http.Request) {
 		"buildDate": time.Now().UTC().Format(time.RFC3339),
 		"goVersion": runtime.Version(),
 	})
-}
-
-func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if _, err := w.Write(dashboardHTML); err != nil {
-		a.logger.ErrorContext(r.Context(), "writing dashboard response", "error", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-	}
 }
 
 type apiResponse struct {

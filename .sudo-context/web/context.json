@@ -1,0 +1,37 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:00:25Z",
+  "sections": {
+    "description": "Vue.js 3 single-page application built with Vite and TypeScript for the Claude Code metrics dashboard.",
+    "purpose": "Provides a modern, component-based frontend for visualizing Claude Code metrics. Built with Vite for fast dev/build, TypeScript for type safety, and Chart.js for data visualization. Build output is placed in internal/query/dashboard/dist/ for Go embedding.",
+    "strengths": [
+      "Strict TypeScript with noUncheckedIndexedAccess catches null/undefined bugs at compile time",
+      "Composition API with composables for clean state management without Pinia overhead",
+      "Each Chart.js component owns its canvas lifecycle (onMounted/watch/onBeforeUnmount) preventing memory leaks",
+      "CSS Modules via <style module> for scoped styling with no class name collisions",
+      "Named exports only per project conventions",
+      "Vite proxy config enables seamless dev experience against local Go server"
+    ],
+    "weaknesses": [
+      "No component-level tests (only utility function tests) \u2014 would benefit from vue-test-utils integration tests",
+      "Chart.js bundle (~355KB gzipped ~117KB) is the dominant dependency; could tree-shake unused chart types",
+      "No error boundary or loading states for individual chart components"
+    ],
+    "test_coverage": "Vitest tests for utility functions: format.ts (fmtNum, fmtCost, fmtDuration \u2014 11 tests) and heatmap.ts (computeLevels \u2014 4 tests). No component tests yet.",
+    "dependencies": [
+      "vue ^3.5.0 \u2014 reactive UI framework",
+      "chart.js ^4.4.0 \u2014 canvas-based charting",
+      "chartjs-adapter-date-fns ^3.0.0 \u2014 time scale adapter for Chart.js",
+      "vite ^6.2.0 \u2014 build tool and dev server",
+      "@vitejs/plugin-vue ^5.2.0 \u2014 Vue SFC compilation",
+      "typescript ^5.7.0 \u2014 type checking",
+      "vue-tsc ^2.2.0 \u2014 Vue-aware TypeScript checker",
+      "vitest ^3.0.0 \u2014 test runner",
+      "@types/node \u2014 Node.js type definitions for vite config"
+    ],
+    "functionality": "- Fetches metrics from Prometheus API endpoints (/api/v1/query, /api/v1/query_range) via typed API client\n- Renders summary cards (tokens, cost, active time, sessions, commits, PRs, lines changed)\n- Displays activity trend heatmaps (daily calendar, day-of-week, hourly)\n- Renders 10 Chart.js visualizations: tokens/cost over time, languages, tool usage, LoC, tokens/cost by model, cost per 1K, token type distribution, activity by session\n- Collapsible sections for Code Activity, Token Breakdown, Efficiency & Cost Analysis\n- Time range selector (1m to 90d) and auto-refresh (30s interval)\n- Vite build outputs to ../internal/query/dashboard/dist/ with base path /dashboard/",
+    "files": "| File | Description |\n|------|-------------|\n| package.json | Dependencies, scripts (dev, build, test, lint) |\n| package-lock.json | Locked dependency versions |\n| tsconfig.json | TypeScript config: strict, noUncheckedIndexedAccess, ES2021 target |\n| tsconfig.node.json | TypeScript config for vite.config.ts (composite, node types) |\n| vite.config.ts | Vite config: vue plugin, /dashboard/ base, build output to internal/query/dashboard/dist/, dev proxy for /api |\n| vitest.config.ts | Vitest config: node environment |\n| index.html | Entry HTML with #app mount point |\n| env.d.ts | Vite client and .vue module type declarations |\n| src/ | Application source code |"
+  }
+}

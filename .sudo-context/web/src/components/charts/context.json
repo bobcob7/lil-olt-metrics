@@ -1,0 +1,32 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web/src/components/charts",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:01:42Z",
+  "sections": {
+    "description": "Chart.js visualization components, each owning a <canvas> element and the full Chart.js instance lifecycle.",
+    "purpose": "Provide reactive Chart.js visualizations for dashboard metrics. Each component creates its Chart instance on mount, updates data via watch, and destroys the instance on unmount to prevent memory leaks.",
+    "strengths": [
+      "Each component is self-contained: creates chart on mount, updates on prop change, destroys on unmount",
+      "Consistent pattern across all 10 chart components makes them easy to maintain",
+      "Type-safe props from DashboardData interface"
+    ],
+    "weaknesses": [
+      "Chart.js registers all chart types globally (registerables) rather than tree-shaking individual components",
+      "Some type assertions needed for Chart.js dataset backgroundColor updates (as unknown as)",
+      "No animation/transition customization"
+    ],
+    "test_coverage": "No component tests. Charts require canvas/DOM which would need jsdom or happy-dom environment.",
+    "dependencies": [
+      "vue (ref, watch, computed, onMounted, onBeforeUnmount)",
+      "chart.js (Chart, registerables)",
+      "chartjs-adapter-date-fns (time scale for line charts)",
+      "../../utils/colors (COLORS, MODEL_COLORS, LANG_COLORS, LOC_COLORS, ACTIVITY_COLORS)",
+      "../../utils/format (fmtNum, fmtCost, fmtDuration)",
+      "../../composables/useDashboardData (ModelTokens type)",
+      "../../api/types (PromRangeResult)"
+    ],
+    "functionality": "- TokensOverTime: line chart of token usage by type (input/output/cache read/cache creation) over time\n- CostOverTime: line chart of cost by model over time\n- LanguagesChart: horizontal bar chart of edit counts by programming language\n- ToolUsageDonut: doughnut chart of edit tool usage distribution\n- LocOverTime: line chart of lines added/removed over time\n- TokensByModel: stacked bar chart of tokens by model and type\n- CostByModel: doughnut chart of cost distribution by model\n- CostPer1k: bar chart of cost per 1K tokens by model\n- TokenTypePie: doughnut chart of token type distribution (input/output/cache)\n- ActivityBySession: stacked bar chart of active time by session ID",
+    "files": "| File | Description |\n|------|-------------|\n| TokensOverTime.vue | Line chart: tokens by type over time |\n| CostOverTime.vue | Line chart: cost by model over time |\n| LanguagesChart.vue | Horizontal bar: edits by language |\n| ToolUsageDonut.vue | Doughnut: edit tool usage distribution |\n| LocOverTime.vue | Line chart: lines added/removed over time |\n| TokensByModel.vue | Stacked bar: tokens by model and type |\n| CostByModel.vue | Doughnut: cost by model |\n| CostPer1k.vue | Bar: cost per 1K tokens by model |\n| TokenTypePie.vue | Doughnut: token type distribution |\n| ActivityBySession.vue | Stacked bar: active time by session |"
+  }
+}

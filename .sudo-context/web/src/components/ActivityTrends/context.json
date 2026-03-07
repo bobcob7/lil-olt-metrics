@@ -1,0 +1,29 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web/src/components/ActivityTrends",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:01:30Z",
+  "sections": {
+    "description": "Activity trends heatmap components showing daily, weekday, and hourly activity patterns over the past year.",
+    "purpose": "Visualize Claude Code active time as GitHub-style heatmaps. The parent ActivityTrends component fetches 1-year data independently from the main dashboard refresh, then passes it to three heatmap sub-components and a legend.",
+    "strengths": [
+      "Year-long data fetched independently so heatmaps always show full history regardless of dashboard time range",
+      "computeLevels uses percentile-based thresholds for adaptive coloring",
+      "Native HTML title attributes for tooltips \u2014 no tooltip library needed"
+    ],
+    "weaknesses": [
+      "CalendarHeatmap rebuilds entire DOM on each data change (not incrementally updated)",
+      "No virtualization for large date ranges in calendar view"
+    ],
+    "test_coverage": "computeLevels tested in __tests__/heatmap.test.ts. No component tests.",
+    "dependencies": [
+      "vue (ref, computed, onMounted, watch)",
+      "../../api/prometheus (promRangeQuery)",
+      "../../utils/heatmap (computeLevels, DAY_NAMES, MONTH_NAMES)",
+      "../../utils/colors (HEATMAP_LEVELS)",
+      "../../utils/format (fmtDuration)"
+    ],
+    "functionality": "- ActivityTrends.vue: fetches 1-year daily (step=86400) and hourly (step=3600) active time data via promRangeQuery, re-fetches on refreshKey prop change, renders CalendarHeatmap + WeekdayHeatmap + HourlyHeatmap + HeatmapLegend\n- CalendarHeatmap.vue: GitHub-style grid with week columns, day rows, month labels; percentile-based level coloring; tooltip shows date, duration, and daily average\n- WeekdayHeatmap.vue: 7-cell horizontal bar for Mon-Sun totals with average per day tooltip\n- HourlyHeatmap.vue: 24-cell horizontal bar for hour-of-day totals with average per occurrence tooltip\n- HeatmapCell.vue: single cell with level-based background color (reusable but currently only used by legend)\n- HeatmapLegend.vue: \"Less ... More\" color scale legend",
+    "files": "| File | Description |\n|------|-------------|\n| ActivityTrends.vue | Parent: fetches year-long data, composes sub-components |\n| CalendarHeatmap.vue | GitHub-style daily activity calendar grid |\n| WeekdayHeatmap.vue | Day-of-week activity summary bar |\n| HourlyHeatmap.vue | Hour-of-day activity summary bar |\n| HeatmapCell.vue | Single heatmap cell with level-based coloring |\n| HeatmapLegend.vue | Less/More color scale legend |"
+  }
+}

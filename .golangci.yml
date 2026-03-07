@@ -8,6 +8,12 @@ linters:
     - revive
     - unused
     - ineffassign
+  exclusions:
+    rules:
+      - linters:
+          - govet
+        # Seek implements chunkenc.Iterator, not io.Seeker.
+        text: "stdmethods: method Seek.* should have signature Seek"
   settings:
     revive:
       rules:

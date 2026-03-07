@@ -1,0 +1,24 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "web/src/utils",
+  "git_ref": "9b5a7c6",
+  "updated_at": "2026-03-07T16:01:59Z",
+  "sections": {
+    "description": "Pure utility functions and constants for formatting, colors, and heatmap computation.",
+    "purpose": "Provide stateless, reusable helpers used across components and composables. All functions are pure with no side effects, making them easy to test.",
+    "strengths": [
+      "All functions are pure and stateless \u2014 easy to test and reason about",
+      "Color constants use 'as const' for literal type narrowing",
+      "computeLevels uses percentile-based adaptive thresholds rather than fixed cutoffs"
+    ],
+    "weaknesses": [
+      "fmtNum uses fixed thresholds (1e3/1e6/1e9) without locale-aware formatting for the integer case"
+    ],
+    "test_coverage": "format.ts: 11 tests (fmtNum, fmtCost, fmtDuration). heatmap.ts: 4 tests (computeLevels). colors.ts: no tests (constants only).",
+    "dependencies": [
+      "None \u2014 pure TypeScript with no imports"
+    ],
+    "functionality": "- format.ts: fmtNum (K/M/B suffixes), fmtCost ($ with adaptive decimal places), fmtDuration (s/m/h)\n- colors.ts: COLORS (token types), MODEL_COLORS, LANG_COLORS, LOC_COLORS, ACTIVITY_COLORS, HEATMAP_LEVELS constants\n- heatmap.ts: computeLevels (percentile-based 0-4 level function), DAY_NAMES, MONTH_NAMES constants",
+    "files": "| File | Description |\n|------|-------------|\n| format.ts | Number, cost, and duration formatting functions |\n| colors.ts | Color palette constants for charts and heatmaps |\n| heatmap.ts | Heatmap level computation and day/month name constants |"
+  }
+}

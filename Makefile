@@ -6,9 +6,12 @@ COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BRANCH  ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
 
-.PHONY: build test lint fmt generate vet
+.PHONY: build test lint fmt generate frontend
 
-build:
+frontend:
+	cd web && npm ci && npm run build
+
+build: frontend
 	go build -ldflags "$(LDFLAGS)" -o $(GOBIN)/lil-olt-metrics ./cmd/server
 
 test:
@@ -23,11 +26,8 @@ fmt: $(GOBIN)/gofumpt
 generate: $(GOBIN)/moq
 	go generate ./...
 
-vet:
-	go vet ./...
-
 $(GOBIN)/golangci-lint: internal/tools/tools.go go.mod
-	GOBIN=$(GOBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint
+	GOBIN=$(GOBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
 $(GOBIN)/gofumpt: internal/tools/tools.go go.mod
 	GOBIN=$(GOBIN) go install mvdan.cc/gofumpt
