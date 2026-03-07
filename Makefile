@@ -6,9 +6,12 @@ COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BRANCH  ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
 
-.PHONY: build test lint fmt generate vet
+.PHONY: build test lint fmt generate vet frontend
 
-build:
+frontend:
+	cd web && npm ci && npm run build
+
+build: frontend
 	go build -ldflags "$(LDFLAGS)" -o $(GOBIN)/lil-olt-metrics ./cmd/server
 
 test:

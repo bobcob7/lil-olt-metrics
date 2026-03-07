@@ -253,13 +253,22 @@ func TestCORSPreflight(t *testing.T) {
 	assert.Empty(t, rr.Body.String())
 }
 
-func TestDashboard(t *testing.T) {
+func TestDashboardRedirect(t *testing.T) {
 	t.Parallel()
 	api, _ := newTestAPI(t)
 	handler := api.Handler()
 	rr := doGet(handler, "/dashboard")
+	assert.Equal(t, http.StatusMovedPermanently, rr.Code)
+	assert.Equal(t, "/dashboard/", rr.Header().Get("Location"))
+}
+
+func TestDashboardSPA(t *testing.T) {
+	t.Parallel()
+	api, _ := newTestAPI(t)
+	handler := api.Handler()
+	rr := doGet(handler, "/dashboard/")
 	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Equal(t, "text/html; charset=utf-8", rr.Header().Get("Content-Type"))
+	assert.Contains(t, rr.Header().Get("Content-Type"), "text/html")
 	assert.Contains(t, rr.Body.String(), "Claude Code Metrics")
 }
 

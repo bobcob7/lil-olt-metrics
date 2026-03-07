@@ -31,3 +31,7 @@ Thumbs.db
 
 # Config overrides
 lil-olt-metrics.local.yaml
+
+# Frontend
+web/node_modules/
+internal/query/dashboard/dist/
