@@ -1,0 +1,44 @@
+{
+  "repo": "bobcob7/lil-olt-metrics",
+  "directory": "scripts",
+  "git_ref": "ec64221",
+  "updated_at": "2026-03-07T06:31:55Z",
+  "sections": {
+    "description": "Platform-specific installation scripts that build the Go binary and register it as a system daemon on macOS (launchd) and Linux (systemd).",
+    "purpose": "Provides one-command installation for lil-olt-metrics on macOS and Linux. Each script builds the binary from source, installs it to /usr/local/bin, writes a default config if absent, and registers the service with the platform's init system so it starts automatically on boot.",
+    "strengths": [
+      "Both scripts use `set -euo pipefail` for strict error handling",
+      "Preflight checks validate OS, root privileges, repository root, and Go availability before proceeding",
+      "Idempotent: existing daemons are stopped/unloaded before reinstalling, and existing configs are preserved",
+      "Linux script creates a dedicated system user/group (`lom`) and applies systemd hardening (NoNewPrivileges, ProtectSystem, ProtectHome, PrivateTmp)",
+      "Consistent structure and logging between both scripts makes them easy to compare and maintain",
+      "Usage/help flag supported in both scripts"
+    ],
+    "weaknesses": [
+      "No uninstall/remove mode \u2014 users must manually reverse the installation steps",
+      "No version flag or version tracking in the installed binary path",
+      "Darwin script does not create a dedicated user \u2014 the daemon runs as root via launchd",
+      "No rollback on partial failure (e.g., binary installed but service registration fails)",
+      "Config path is hardcoded; no flag to override install locations",
+      "No checksum or signature verification of the built binary"
+    ],
+    "test_coverage": "No tests. These are operational scripts without automated test coverage.",
+    "dependencies": [
+      "Go toolchain (required to build the binary from source)",
+      "macOS launchd (install-darwin.sh)",
+      "Linux systemd (install-linux.sh)",
+      "Root/sudo privileges on the target system",
+      "Repository source tree with go.mod at the root and cmd/server as the build entry point"
+    ],
+    "functionality": [
+      "Build the lil-olt-metrics binary from `./cmd/server` using `go build`",
+      "Install the binary to `/usr/local/bin`",
+      "Create data and config directories with appropriate ownership",
+      "Write a default `config.yaml` if one does not already exist",
+      "macOS: generate and load a launchd plist at `/Library/LaunchDaemons/com.bobcob7.lil-olt-metrics.plist` with KeepAlive and RunAtLoad",
+      "Linux: create a dedicated `lom` system user/group, generate a hardened systemd unit, enable and start the service",
+      "Gracefully stop/unload any previously installed instance before reinstalling"
+    ],
+    "files": "| File | Description |\n|---|---|\n| install-darwin.sh | Builds and installs lil-olt-metrics as a macOS launchd daemon under /Library/LaunchDaemons |\n| install-linux.sh | Builds and installs lil-olt-metrics as a Linux systemd service with a dedicated system user and hardened unit file |"
+  }
+}
