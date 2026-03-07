@@ -27,10 +27,10 @@ generate: $(GOBIN)/moq
 	go generate ./...
 
 vet:
-	go vet ./...
+	go vet -stdmethods=false ./...
 
 $(GOBIN)/golangci-lint: internal/tools/tools.go go.mod
-	GOBIN=$(GOBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint
+	GOBIN=$(GOBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
 $(GOBIN)/gofumpt: internal/tools/tools.go go.mod
 	GOBIN=$(GOBIN) go install mvdan.cc/gofumpt

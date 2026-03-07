@@ -319,7 +319,6 @@ func (a *API) statusBuildInfo(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-
 type apiResponse struct {
 	Status    string   `json:"status"`
 	Data      any      `json:"data,omitempty"`
