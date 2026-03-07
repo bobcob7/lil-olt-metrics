@@ -88,6 +88,13 @@
     font-size: 1rem;
   }
   .hero .cta:hover { opacity: 0.9; text-decoration: none; }
+  .version-badge {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .version-badge a { color: var(--text-muted); }
+  .version-badge a:hover { color: var(--accent); }
 
   /* Features */
   h2 {
@@ -273,6 +280,7 @@
     Zero-config startup.
   </p>
   <a class="cta" href="#install">Install Now</a>
+  <p class="version-badge" id="version-badge"></p>
 </section>
 
 <!-- Features -->
@@ -466,6 +474,13 @@ function showTab(name) {
   event.target.classList.add('active');
   document.getElementById('panel-' + name).classList.add('active');
 }
+(function() {
+  var el = document.getElementById('version-badge');
+  var v = document.body.getAttribute('data-version');
+  if (el && v) {
+    el.innerHTML = 'Latest: <a href="https://github.com/bobcob7/lil-olt-metrics/releases/tag/' + v + '">' + v + '</a>';
+  }
+})();
 </script>
 </body>
 </html>
