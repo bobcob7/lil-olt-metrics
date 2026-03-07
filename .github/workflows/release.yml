@@ -95,7 +95,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Inject version into site
-        run: sed -i 's/<body>/<body data-version="${{ github.ref_name }}">/' site/index.html
+        run: |
+          VERSION="${{ github.ref_name }}"
+          sed -i "s|<body>|<body data-version=\"${VERSION}\">|" site/index.html
+          sed -i "s|releases/latest/download/|releases/download/${VERSION}/|g" site/index.html
+          sed -i "s|--version v0.2.0|--version ${VERSION}|g" site/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
