@@ -16,7 +16,13 @@ The dashboard is embedded in the binary — no separate frontend to deploy. Auto
 
 ### Setup
 
-Configure Claude Code to export OTLP metrics to lil-olt-metrics, then open `http://localhost:9090/dashboard/` in your browser.
+1. [Enable Claude Code telemetry export](https://docs.anthropic.com/en/docs/claude-code/monitoring-usage) by setting the following environment variables:
+   ```bash
+   export CLAUDE_CODE_ENABLE_TELEMETRY=1
+   export OTEL_METRICS_EXPORTER=otlp
+   export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+   ```
+2. Open `http://localhost:9090/dashboard/` in your browser
 
 ## Features
 

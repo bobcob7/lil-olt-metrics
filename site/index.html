@@ -430,8 +430,11 @@
       <code># 1. Install lil-olt-metrics
 curl -fsSL https://github.com/bobcob7/lil-olt-metrics/releases/latest/download/install.sh | sudo bash
 
-# 2. Configure Claude Code to export OTLP metrics (in Claude Code settings)
-#    Set telemetry endpoint to http://localhost:4318
+# 2. Enable Claude Code telemetry export
+#    See: https://docs.anthropic.com/en/docs/claude-code/monitoring-usage
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_METRICS_EXPORTER=otlp
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 
 # 3. Open the dashboard
 open http://localhost:9090/dashboard/</code>
