@@ -1,9 +1,32 @@
 # lil-olt-metrics
 
-A minimal, single-process metrics server that ingests [OTLP](https://opentelemetry.io/docs/specs/otlp/) metrics and serves them via the [Prometheus HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/). Designed for edge deployments, dev environments, and lightweight production use.
+A minimal, single-process metrics server with a **built-in Claude Code dashboard**. Ingests [OTLP](https://opentelemetry.io/docs/specs/otlp/) metrics, serves them via the [Prometheus HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/), and visualizes your AI coding workflow — token usage, costs, activity patterns, and code impact — all in a single binary.
+
+## Claude Code Dashboard
+
+lil-olt-metrics ships with a **built-in dashboard for Claude Code metrics** at `/dashboard/`. Point Claude Code's OTLP exporter at the server and get instant visibility into your AI coding workflow:
+
+- **Token usage & cost** - Track input/output/cache tokens and dollar cost by model over time
+- **Activity trends** - Heatmaps showing hourly, weekday, and calendar activity patterns
+- **Code impact** - Commits, pull requests, and lines of code added/removed
+- **Session analytics** - Active time per session, session counts, and tool usage breakdowns
+- **Language distribution** - Code edit decisions broken down by language and tool
+
+The dashboard is embedded in the binary — no separate frontend to deploy. Auto-refreshes every 30 seconds with configurable time ranges (24h, 7d, 30d, 90d).
+
+### Setup
+
+1. [Enable Claude Code telemetry export](https://docs.anthropic.com/en/docs/claude-code/monitoring-usage) by setting the following environment variables:
+   ```bash
+   export CLAUDE_CODE_ENABLE_TELEMETRY=1
+   export OTEL_METRICS_EXPORTER=otlp
+   export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+   ```
+2. Open `http://localhost:9090/dashboard/` in your browser
 
 ## Features
 
+- **Built-in Claude Code dashboard** with token, cost, activity, and code impact visualizations
 - **OTLP ingestion** via gRPC (`:4317`) and HTTP (`:4318`) with protobuf and JSON support
 - **Prometheus-compatible query API** (`:9090`) with full PromQL engine - works with Grafana out of the box
 - **Pluggable storage**: built-in filesystem engine with WAL and compaction, or remote backends (Prometheus remote write, VictoriaMetrics)
@@ -76,18 +99,7 @@ Add a Prometheus datasource pointing to `http://localhost:9090` and start buildi
 
 ## Architecture
 
-```
-                    +-------------------+
-  OTLP gRPC :4317 --->|                   |
-                    |   lil-olt-metrics  |---> Prometheus API :9090 ---> Grafana
-  OTLP HTTP :4318 --->|                   |
-                    +-------------------+
-                            |
-                    +-------+-------+
-                    |       |       |
-                   FS   Prometheus  VM
-                  store   remote   remote
-```
+[![Architecture diagram showing OTLP ingestion via gRPC and HTTP flowing through lil-olt-metrics to the Prometheus API, Dashboard UI, and pluggable storage backends](https://www.plantuml.com/plantuml/png/~1UDgDb4zlr30GnU_-5DOYSLjrqy2svO1Q2eMLYWZjmYcNsTZvephZO4_Q0-ftnt6IJR9TXPvilVbbtlZPogKbC5INYjc70YimKF8T90-PqJMAQwsquMzM8WY2in4XP0greXkDr25oBKKQZf0hO_HJLtn_3kiq7HKJNLOQ9TAdGwjW7UnEJu-YsWXfEYnSXUjG7CFcPggS6sJo_wOzE6lPGNE60WXsO5_Xk2TdBNjgpZDHkXQloDLZyvaso9oLpK7efm8pdeAoah7zBV35Z-rjnBExw3h63-_2u6p1mVBCLCaBwDjs6xNGkOToeegnBbs-K8LQQaNBKf8f4kiHfKl-bt4-QhN1J5hYRsFS6a2hWAH72wzFsNlInlNsTTlkfq1aTFdpDiOlc1NOSfMJ_gWfzXbiljDWH8o_DfuIJc7Fao2QNf9oMLj-5MtSGIzM5oiFGrMmuzqySo9wuMJVMzSq_kIhWHGGkcpzdh7-aV35pNsCpLdR4wHsL1gcYl5Ebfg6KuwetzydrSUIiUOA-T8KMKxBZtswpPMz4DjbaFkakvKltTj1fxkv3YK_ng7uE9AKJAdZtAMqo-3K1DkaDIXzTguoY7rYbnA5-mF-0od9lmG0)](https://www.plantuml.com/plantuml/uml/~1UDgDb4zlr30GnU_-5DOYSLjrqy2svO1Q2eMLYWZjmYcNsTZvephZO4_Q0-ftnt6IJR9TXPvilVbbtlZPogKbC5INYjc70YimKF8T90-PqJMAQwsquMzM8WY2in4XP0greXkDr25oBKKQZf0hO_HJLtn_3kiq7HKJNLOQ9TAdGwjW7UnEJu-YsWXfEYnSXUjG7CFcPggS6sJo_wOzE6lPGNE60WXsO5_Xk2TdBNjgpZDHkXQloDLZyvaso9oLpK7efm8pdeAoah7zBV35Z-rjnBExw3h63-_2u6p1mVBCLCaBwDjs6xNGkOToeegnBbs-K8LQQaNBKf8f4kiHfKl-bt4-QhN1J5hYRsFS6a2hWAH72wzFsNlInlNsTTlkfq1aTFdpDiOlc1NOSfMJ_gWfzXbiljDWH8o_DfuIJc7Fao2QNf9oMLj-5MtSGIzM5oiFGrMmuzqySo9wuMJVMzSq_kIhWHGGkcpzdh7-aV35pNsCpLdR4wHsL1gcYl5Ebfg6KuwetzydrSUIiUOA-T8KMKxBZtswpPMz4DjbaFkakvKltTj1fxkv3YK_ng7uE9AKJAdZtAMqo-3K1DkaDIXzTguoY7rYbnA5-mF-0od9lmG0)
 
 Incoming OTLP metrics are translated to the Prometheus data model and stored. The Prometheus HTTP API serves queries using the embedded PromQL engine.
 
@@ -97,6 +109,7 @@ Incoming OTLP metrics are translated to the Prometheus data model and stored. Th
 2. **Translation** (`internal/ingest/translator.go`) - Converts OTLP metric types to Prometheus samples with label mapping, unit suffixes, and delta-to-cumulative conversion
 3. **Storage** (`internal/store/`) - Samples are written via the `Appender` interface to the configured backend
 4. **Query** (`internal/query/`) - Prometheus HTTP API backed by the PromQL engine
+5. **Dashboard** (`web/`) - Embedded Vue.js dashboard for Claude Code metrics, served at `/dashboard/`
 
 ## Configuration
 
@@ -186,9 +199,10 @@ internal/
   config/           Configuration loading and defaults
   ingest/           OTLP ingestion (gRPC, HTTP, translator)
   store/            Storage backends (FS, MemStore, Prometheus, VictoriaMetrics)
-  query/            Prometheus HTTP API and PromQL engine
+  query/            Prometheus HTTP API, PromQL engine, and embedded dashboard
   integration/      End-to-end integration tests
   tools/            Dev tool version pinning
+web/                Claude Code dashboard (Vue 3 + Vite + Chart.js)
 docs/               Architecture and reference documentation
 plans/              Implementation roadmap
 ```
