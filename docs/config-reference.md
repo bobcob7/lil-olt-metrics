@@ -106,10 +106,10 @@ Settings for the per-session events store backing the OTLP logs receiver. Valida
 
 | Field | Type | Default | Env Var | Description |
 |-------|------|---------|---------|-------------|
-| `logs.enabled` | bool | `false` | `LOM_LOGS_ENABLED` | Enable the bbolt-backed sessions store |
+| `logs.enabled` | bool | `true` | `LOM_LOGS_ENABLED` | Enable the bbolt-backed sessions store |
 | `logs.path` | string | `"./data/sessions.db"` | `LOM_LOGS_PATH` | bbolt database file path |
 | `logs.retention` | duration | `"24h"` | `LOM_LOGS_RETENTION` | Drop sessions whose `last_seen` is older than this |
-| `logs.max_events_per_session` | int | `500` | `LOM_LOGS_MAX_EVENTS_PER_SESSION` | Cap on stored events per session; oldest events are dropped first |
+| `logs.max_events_per_session` | int | `5000` | `LOM_LOGS_MAX_EVENTS_PER_SESSION` | Cap on stored events per session; oldest events are dropped first |
 | `logs.capture_content` | bool | `false` | `LOM_LOGS_CAPTURE_CONTENT` | Persist log record bodies (e.g., user prompt text). Off by default for privacy. |
 
 ## Translation
@@ -189,10 +189,10 @@ retention:
   max_size: 0
 
 logs:
-  enabled: false
+  enabled: true
   path: ./data/sessions.db
   retention: 24h
-  max_events_per_session: 500
+  max_events_per_session: 5000
   capture_content: false
 
 translation:

@@ -41,10 +41,10 @@ func TestLoadDefaults(t *testing.T) {
 	assert.Equal(t, "job", c.Translation.ResourceAttributes.LabelMap["service.name"])
 	assert.Equal(t, "instance", c.Translation.ResourceAttributes.LabelMap["service.instance.id"])
 	assert.False(t, c.OTLP.LOGS.Enabled)
-	assert.False(t, c.Logs.Enabled)
+	assert.True(t, c.Logs.Enabled)
 	assert.Equal(t, "./data/sessions.db", c.Logs.Path)
 	assert.Equal(t, 24*time.Hour, c.Logs.Retention.AsDuration())
-	assert.Equal(t, 500, c.Logs.MaxEventsPerSession)
+	assert.Equal(t, 5000, c.Logs.MaxEventsPerSession)
 	assert.False(t, c.Logs.CaptureContent)
 }
 
@@ -54,6 +54,8 @@ func TestValidateOTLPLogsRequiresLogsEnabled(t *testing.T) {
 otlp:
   logs:
     enabled: true
+logs:
+  enabled: false
 `
 	path := writeTestYAML(t, yamlContent)
 	_, err := Load(path)

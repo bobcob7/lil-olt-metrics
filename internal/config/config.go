@@ -284,10 +284,10 @@ func newDefaults() *Config {
 			MaxSize:  0,
 		},
 		Logs: LogsConfig{
-			Enabled:             false,
+			Enabled:             true,
 			Path:                "./data/sessions.db",
 			Retention:           Duration(24 * time.Hour),
-			MaxEventsPerSession: 500,
+			MaxEventsPerSession: 5000,
 			CaptureContent:      false,
 		},
 		Translation: TranslationConfig{
