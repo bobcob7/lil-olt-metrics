@@ -44,7 +44,7 @@ Extend `internal/config` with (a) an `OTLP.LOGS` block toggling the logs receive
 type OTLPConfig struct {
     GRPC OTLPGRPCConfig `yaml:"grpc"`
     HTTP OTLPHTTPConfig `yaml:"http"`
-    LOGS OTLPLogsConfig `yaml:"logs"`
+    Logs OTLPLogsConfig `yaml:"logs"`
 }
 
 type OTLPLogsConfig struct {
