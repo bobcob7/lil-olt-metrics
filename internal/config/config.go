@@ -87,7 +87,7 @@ type ServerConfig struct {
 type OTLPConfig struct {
 	GRPC OTLPGRPCConfig `yaml:"grpc"`
 	HTTP OTLPHTTPConfig `yaml:"http"`
-	LOGS OTLPLogsConfig `yaml:"logs"`
+	Logs OTLPLogsConfig `yaml:"logs"`
 }
 
 // OTLPLogsConfig toggles the OTLP logs receiver on the existing gRPC and HTTP listeners.
@@ -246,7 +246,7 @@ func newDefaults() *Config {
 				MaxBodySize: 4194304,
 				Gzip:        true,
 			},
-			LOGS: OTLPLogsConfig{
+			Logs: OTLPLogsConfig{
 				Enabled: false,
 			},
 		},
@@ -446,7 +446,7 @@ func validate(c *Config) error {
 	if c.Retention.MaxSize < 0 {
 		errs = append(errs, fmt.Errorf("retention.max_size: must not be negative"))
 	}
-	if c.OTLP.LOGS.Enabled && !c.Logs.Enabled {
+	if c.OTLP.Logs.Enabled && !c.Logs.Enabled {
 		errs = append(errs, fmt.Errorf("otlp.logs.enabled requires logs.enabled to also be true"))
 	}
 	if c.Logs.Enabled {
