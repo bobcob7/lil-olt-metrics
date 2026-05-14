@@ -34,4 +34,13 @@ lil-olt-metrics.local.yaml
 
 # Frontend
 web/node_modules/
+web/*.tsbuildinfo
+web/vite.config.d.ts
+web/vite.config.js
 internal/query/dashboard/dist/
+
+# Runtime data
+/data/
+
+# Tooling artifacts
+.playwright-mcp/
