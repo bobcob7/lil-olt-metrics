@@ -40,6 +40,90 @@ func TestLoadDefaults(t *testing.T) {
 	assert.True(t, c.Translation.AddTypeSuffix)
 	assert.Equal(t, "job", c.Translation.ResourceAttributes.LabelMap["service.name"])
 	assert.Equal(t, "instance", c.Translation.ResourceAttributes.LabelMap["service.instance.id"])
+	assert.False(t, c.OTLP.LOGS.Enabled)
+	assert.False(t, c.Logs.Enabled)
+	assert.Equal(t, "./data/sessions.db", c.Logs.Path)
+	assert.Equal(t, 24*time.Hour, c.Logs.Retention.AsDuration())
+	assert.Equal(t, 500, c.Logs.MaxEventsPerSession)
+	assert.False(t, c.Logs.CaptureContent)
+}
+
+func TestValidateOTLPLogsRequiresLogsEnabled(t *testing.T) {
+	t.Parallel()
+	yamlContent := `
+otlp:
+  logs:
+    enabled: true
+`
+	path := writeTestYAML(t, yamlContent)
+	_, err := Load(path)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "otlp.logs.enabled")
+	assert.Contains(t, err.Error(), "logs.enabled")
+}
+
+func TestValidateLogsEnabledRequiresPath(t *testing.T) {
+	t.Parallel()
+	yamlContent := `
+logs:
+  enabled: true
+  path: ""
+`
+	path := writeTestYAML(t, yamlContent)
+	_, err := Load(path)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "logs.path")
+}
+
+func TestValidateLogsMaxEventsMustBePositive(t *testing.T) {
+	t.Parallel()
+	yamlContent := `
+logs:
+  enabled: true
+  max_events_per_session: 0
+`
+	path := writeTestYAML(t, yamlContent)
+	_, err := Load(path)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "logs.max_events_per_session")
+}
+
+func TestEnvOverrideLogsPath(t *testing.T) {
+	t.Setenv("LOM_LOGS_PATH", "/tmp/x.db")
+	c, err := Load("")
+	require.NoError(t, err)
+	assert.Equal(t, "/tmp/x.db", c.Logs.Path)
+}
+
+func TestEnvOverrideLogsRetention(t *testing.T) {
+	t.Setenv("LOM_LOGS_RETENTION", "2h")
+	c, err := Load("")
+	require.NoError(t, err)
+	assert.Equal(t, 2*time.Hour, c.Logs.Retention.AsDuration())
+}
+
+func TestLoadYAMLLogsBlock(t *testing.T) {
+	t.Parallel()
+	yamlContent := `
+otlp:
+  logs:
+    enabled: true
+logs:
+  enabled: true
+  path: /var/lib/lom/sessions.db
+  retention: 6h
+  max_events_per_session: 250
+  capture_content: true
+`
+	path := writeTestYAML(t, yamlContent)
+	c, err := Load(path)
+	require.NoError(t, err)
+	assert.True(t, c.OTLP.LOGS.Enabled)
+	assert.True(t, c.Logs.Enabled)
+	assert.Equal(t, "/var/lib/lom/sessions.db", c.Logs.Path)
+	assert.Equal(t, 6*time.Hour, c.Logs.Retention.AsDuration())
+	assert.Equal(t, 250, c.Logs.MaxEventsPerSession)
+	assert.True(t, c.Logs.CaptureContent)
 }
 
 func TestLoadYAMLOverride(t *testing.T) {

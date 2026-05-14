@@ -74,6 +74,7 @@ type Config struct {
 	Storage     StorageConfig     `yaml:"storage"`
 	Retention   RetentionConfig   `yaml:"retention"`
 	Translation TranslationConfig `yaml:"translation"`
+	Logs        LogsConfig        `yaml:"logs"`
 }
 
 // ServerConfig holds server-level settings.
@@ -86,6 +87,12 @@ type ServerConfig struct {
 type OTLPConfig struct {
 	GRPC OTLPGRPCConfig `yaml:"grpc"`
 	HTTP OTLPHTTPConfig `yaml:"http"`
+	LOGS OTLPLogsConfig `yaml:"logs"`
+}
+
+// OTLPLogsConfig toggles the OTLP logs receiver on the existing gRPC and HTTP listeners.
+type OTLPLogsConfig struct {
+	Enabled bool `yaml:"enabled"`
 }
 
 // OTLPGRPCConfig holds gRPC OTLP settings.
@@ -179,6 +186,15 @@ type RetentionConfig struct {
 	MaxSize  ByteSize `yaml:"max_size"`
 }
 
+// LogsConfig holds settings for the per-session events store backing the OTLP logs receiver.
+type LogsConfig struct {
+	Enabled             bool     `yaml:"enabled"`
+	Path                string   `yaml:"path"`
+	Retention           Duration `yaml:"retention"`
+	MaxEventsPerSession int      `yaml:"max_events_per_session"`
+	CaptureContent      bool     `yaml:"capture_content"`
+}
+
 // TranslationConfig holds OTLP-to-Prometheus translation settings.
 type TranslationConfig struct {
 	ResourceAttributes  ResourceAttributesConfig `yaml:"resource_attributes"`
@@ -230,6 +246,9 @@ func newDefaults() *Config {
 				MaxBodySize: 4194304,
 				Gzip:        true,
 			},
+			LOGS: OTLPLogsConfig{
+				Enabled: false,
+			},
 		},
 		Prometheus: PrometheusConfig{
 			Listen:             ":9090",
@@ -263,6 +282,13 @@ func newDefaults() *Config {
 		Retention: RetentionConfig{
 			Duration: Duration(15 * 24 * time.Hour),
 			MaxSize:  0,
+		},
+		Logs: LogsConfig{
+			Enabled:             false,
+			Path:                "./data/sessions.db",
+			Retention:           Duration(24 * time.Hour),
+			MaxEventsPerSession: 500,
+			CaptureContent:      false,
 		},
 		Translation: TranslationConfig{
 			ResourceAttributes: ResourceAttributesConfig{
@@ -419,6 +445,20 @@ func validate(c *Config) error {
 	}
 	if c.Retention.MaxSize < 0 {
 		errs = append(errs, fmt.Errorf("retention.max_size: must not be negative"))
+	}
+	if c.OTLP.LOGS.Enabled && !c.Logs.Enabled {
+		errs = append(errs, fmt.Errorf("otlp.logs.enabled requires logs.enabled to also be true"))
+	}
+	if c.Logs.Enabled {
+		if c.Logs.Path == "" {
+			errs = append(errs, fmt.Errorf("logs.path: must not be empty when logs.enabled is true"))
+		}
+		if c.Logs.MaxEventsPerSession <= 0 {
+			errs = append(errs, fmt.Errorf("logs.max_events_per_session: must be positive"))
+		}
+		if c.Logs.Retention.AsDuration() < 0 {
+			errs = append(errs, fmt.Errorf("logs.retention: must not be negative"))
+		}
 	}
 	return errors.Join(errs...)
 }

@@ -35,6 +35,12 @@ Environment variable names follow the pattern `LOM_<SECTION>_<FIELD>` using the 
 | `otlp.http.max_body_size` | int | `4194304` | `LOM_OTLP_HTTP_MAX_BODY_SIZE` | Maximum HTTP body size in bytes (4 MB) |
 | `otlp.http.gzip` | bool | `true` | `LOM_OTLP_HTTP_GZIP` | Enable gzip decompression |
 
+### Logs
+
+| Field | Type | Default | Env Var | Description |
+|-------|------|---------|---------|-------------|
+| `otlp.logs.enabled` | bool | `false` | `LOM_OTLP_LOGS_ENABLED` | Enable OTLP logs receiver on the existing gRPC and HTTP listeners. Requires `logs.enabled=true`. |
+
 ## Prometheus Query API
 
 | Field | Type | Default | Env Var | Description |
@@ -94,6 +100,18 @@ Environment variable names follow the pattern `LOM_<SECTION>_<FIELD>` using the 
 | `retention.duration` | duration | `"15d"` | `LOM_RETENTION_DURATION` | How long to keep data (supports `d` suffix for days) |
 | `retention.max_size` | bytesize | `0` | `LOM_RETENTION_MAX_SIZE` | Maximum storage size (0 = unlimited) |
 
+## Logs (Sessions Store)
+
+Settings for the per-session events store backing the OTLP logs receiver. Validation rule: enabling `otlp.logs.enabled` requires `logs.enabled=true`.
+
+| Field | Type | Default | Env Var | Description |
+|-------|------|---------|---------|-------------|
+| `logs.enabled` | bool | `false` | `LOM_LOGS_ENABLED` | Enable the bbolt-backed sessions store |
+| `logs.path` | string | `"./data/sessions.db"` | `LOM_LOGS_PATH` | bbolt database file path |
+| `logs.retention` | duration | `"24h"` | `LOM_LOGS_RETENTION` | Drop sessions whose `last_seen` is older than this |
+| `logs.max_events_per_session` | int | `500` | `LOM_LOGS_MAX_EVENTS_PER_SESSION` | Cap on stored events per session; oldest events are dropped first |
+| `logs.capture_content` | bool | `false` | `LOM_LOGS_CAPTURE_CONTENT` | Persist log record bodies (e.g., user prompt text). Off by default for privacy. |
+
 ## Translation
 
 | Field | Type | Default | Env Var | Description |
@@ -143,6 +161,8 @@ otlp:
     listen: ":4318"
     max_body_size: 4194304
     gzip: true
+  logs:
+    enabled: false
 
 prometheus:
   listen: ":9090"
@@ -167,6 +187,13 @@ storage:
 retention:
   duration: 15d
   max_size: 0
+
+logs:
+  enabled: false
+  path: ./data/sessions.db
+  retention: 24h
+  max_events_per_session: 500
+  capture_content: false
 
 translation:
   sanitize_metric_names: true
