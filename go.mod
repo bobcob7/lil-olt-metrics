@@ -8,6 +8,7 @@ require (
 	github.com/matryer/moq v0.6.0
 	github.com/prometheus/prometheus v0.309.1
 	github.com/stretchr/testify v1.11.1
+	go.etcd.io/bbolt v1.4.3
 	go.opentelemetry.io/proto/otlp v1.9.0
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
