@@ -5,7 +5,9 @@ package ingest
 
 import (
 	"context"
+	"github.com/bobcob7/lil-olt-metrics/internal/sessions"
 	"github.com/bobcob7/lil-olt-metrics/internal/store"
+	collogspb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	colmetricspb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"sync"
 )
@@ -145,5 +147,143 @@ func (mock *metricsStoreMock) AppenderCalls() []struct {
 	mock.lockAppender.RLock()
 	calls = mock.calls.Appender
 	mock.lockAppender.RUnlock()
+	return calls
+}
+
+// Ensure, that logsTranslatorMock does implement logsTranslator.
+// If this is not the case, regenerate this file with moq.
+var _ logsTranslator = &logsTranslatorMock{}
+
+// logsTranslatorMock is a mock implementation of logsTranslator.
+//
+//	func TestSomethingThatUseslogsTranslator(t *testing.T) {
+//
+//		// make and configure a mocked logsTranslator
+//		mockedlogsTranslator := &logsTranslatorMock{
+//			TranslateFunc: func(req *collogspb.ExportLogsServiceRequest) ([]sessions.Event, error) {
+//				panic("mock out the Translate method")
+//			},
+//		}
+//
+//		// use mockedlogsTranslator in code that requires logsTranslator
+//		// and then make assertions.
+//
+//	}
+type logsTranslatorMock struct {
+	// TranslateFunc mocks the Translate method.
+	TranslateFunc func(req *collogspb.ExportLogsServiceRequest) ([]sessions.Event, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Translate holds details about calls to the Translate method.
+		Translate []struct {
+			// Req is the req argument value.
+			Req *collogspb.ExportLogsServiceRequest
+		}
+	}
+	lockTranslate sync.RWMutex
+}
+
+// Translate calls TranslateFunc.
+func (mock *logsTranslatorMock) Translate(req *collogspb.ExportLogsServiceRequest) ([]sessions.Event, error) {
+	if mock.TranslateFunc == nil {
+		panic("logsTranslatorMock.TranslateFunc: method is nil but logsTranslator.Translate was just called")
+	}
+	callInfo := struct {
+		Req *collogspb.ExportLogsServiceRequest
+	}{
+		Req: req,
+	}
+	mock.lockTranslate.Lock()
+	mock.calls.Translate = append(mock.calls.Translate, callInfo)
+	mock.lockTranslate.Unlock()
+	return mock.TranslateFunc(req)
+}
+
+// TranslateCalls gets all the calls that were made to Translate.
+// Check the length with:
+//
+//	len(mockedlogsTranslator.TranslateCalls())
+func (mock *logsTranslatorMock) TranslateCalls() []struct {
+	Req *collogspb.ExportLogsServiceRequest
+} {
+	var calls []struct {
+		Req *collogspb.ExportLogsServiceRequest
+	}
+	mock.lockTranslate.RLock()
+	calls = mock.calls.Translate
+	mock.lockTranslate.RUnlock()
+	return calls
+}
+
+// Ensure, that sessionsStoreMock does implement sessionsStore.
+// If this is not the case, regenerate this file with moq.
+var _ sessionsStore = &sessionsStoreMock{}
+
+// sessionsStoreMock is a mock implementation of sessionsStore.
+//
+//	func TestSomethingThatUsessessionsStore(t *testing.T) {
+//
+//		// make and configure a mocked sessionsStore
+//		mockedsessionsStore := &sessionsStoreMock{
+//			AppendEventFunc: func(ctx context.Context, evt sessions.Event) error {
+//				panic("mock out the AppendEvent method")
+//			},
+//		}
+//
+//		// use mockedsessionsStore in code that requires sessionsStore
+//		// and then make assertions.
+//
+//	}
+type sessionsStoreMock struct {
+	// AppendEventFunc mocks the AppendEvent method.
+	AppendEventFunc func(ctx context.Context, evt sessions.Event) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// AppendEvent holds details about calls to the AppendEvent method.
+		AppendEvent []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Evt is the evt argument value.
+			Evt sessions.Event
+		}
+	}
+	lockAppendEvent sync.RWMutex
+}
+
+// AppendEvent calls AppendEventFunc.
+func (mock *sessionsStoreMock) AppendEvent(ctx context.Context, evt sessions.Event) error {
+	if mock.AppendEventFunc == nil {
+		panic("sessionsStoreMock.AppendEventFunc: method is nil but sessionsStore.AppendEvent was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Evt sessions.Event
+	}{
+		Ctx: ctx,
+		Evt: evt,
+	}
+	mock.lockAppendEvent.Lock()
+	mock.calls.AppendEvent = append(mock.calls.AppendEvent, callInfo)
+	mock.lockAppendEvent.Unlock()
+	return mock.AppendEventFunc(ctx, evt)
+}
+
+// AppendEventCalls gets all the calls that were made to AppendEvent.
+// Check the length with:
+//
+//	len(mockedsessionsStore.AppendEventCalls())
+func (mock *sessionsStoreMock) AppendEventCalls() []struct {
+	Ctx context.Context
+	Evt sessions.Event
+} {
+	var calls []struct {
+		Ctx context.Context
+		Evt sessions.Event
+	}
+	mock.lockAppendEvent.RLock()
+	calls = mock.calls.AppendEvent
+	mock.lockAppendEvent.RUnlock()
 	return calls
 }
